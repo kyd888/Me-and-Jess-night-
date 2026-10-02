@@ -7,6 +7,8 @@ import Reveal from "./components/Reveal.jsx";
 import Finale from "./components/Finale.jsx";
 import Toast from "./components/Toast.jsx";
 import HostMode from "./components/HostMode.jsx";
+import Handoff from "./components/Handoff.jsx";
+import { isHomeScreenApp } from "./lib/share.js";
 import { useLongPress } from "./lib/useLongPress.js";
 import {
   clearPlan,
@@ -26,6 +28,27 @@ export default function App() {
   const [hostOpen, setHostOpen] = useState(() =>
     new URLSearchParams(window.location.search).has("host")
   );
+  // Launched from the Home Screen icon (or ?qr) → show the QR for Jess first.
+  // Her link carries ?jess, so her phone always goes straight to the night.
+  const [handoff, setHandoff] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("jess")) {
+      try {
+        localStorage.setItem("jess-night:role", "jess");
+      } catch {
+        /* ignore */
+      }
+      return false;
+    }
+    if (params.has("qr")) return true;
+    let isJessPhone = false;
+    try {
+      isJessPhone = localStorage.getItem("jess-night:role") === "jess";
+    } catch {
+      /* ignore */
+    }
+    return !isJessPhone && isHomeScreenApp();
+  });
   const toastTimer = useRef();
 
   useEffect(() => saveProgress(progress), [progress]);
@@ -104,7 +127,9 @@ export default function App() {
   );
 
   let content;
-  if (screen === "intro") {
+  if (handoff) {
+    content = <Handoff plan={plan} onPreview={() => setHandoff(false)} />;
+  } else if (screen === "intro") {
     content = <Intro plan={plan} onStart={start} />;
   } else if (screen === "choose" && current) {
     content = <Chapter chapter={current} index={chapter} onPick={pick} onSkip={next} />;
@@ -132,10 +157,10 @@ export default function App() {
       <div className="host-door" aria-hidden="true" {...hostPress} />
 
       <div className="app">
-        {screen !== "intro" && (
+        {!handoff && screen !== "intro" && (
           <Progress total={chapters.length + 1} done={stepsDone} active={activeStep} />
         )}
-        <main key={`${screen}-${chapter}`} className="screen">
+        <main key={handoff ? "handoff" : `${screen}-${chapter}`} className="screen">
           {content}
         </main>
       </div>
@@ -148,6 +173,10 @@ export default function App() {
           setPlan={setPlan}
           progress={progress}
           host={host}
+          onShowQr={() => {
+            setHandoff(true);
+            setHostOpen(false);
+          }}
           onClose={() => setHostOpen(false)}
         />
       )}

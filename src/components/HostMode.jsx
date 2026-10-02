@@ -24,7 +24,7 @@ function Field({ label, value, onChange, type }) {
   );
 }
 
-export default function HostMode({ plan, setPlan, progress, host, onClose }) {
+export default function HostMode({ plan, setPlan, progress, host, onShowQr, onClose }) {
   const [open, setOpen] = useState(progress.chapter);
   const [copied, setCopied] = useState(false);
 
@@ -72,9 +72,20 @@ export default function HostMode({ plan, setPlan, progress, host, onClose }) {
         </header>
 
         <section className="host-card">
-          <h3>Controls</h3>
+          <h3>Jess's phone</h3>
+          <p className="h-small">
+            Show her the QR code to start the night on her phone. Your edits below go into the code, so if you
+            change something mid-date (a place is closed), have her scan again. Her progress is kept.
+          </p>
+          <div className="h-row" style={{ marginTop: 10 }}>
+            <button className="h-btn h-accent" onClick={onShowQr}>Show Jess's QR code</button>
+          </div>
+        </section>
+
+        <section className="host-card">
+          <h3>Controls (this phone)</h3>
           <div className="h-row">
-            <button className="h-btn h-accent" onClick={host.skip}>Skip ahead →</button>
+            <button className="h-btn" onClick={host.skip}>Skip ahead →</button>
             <button className="h-btn" onClick={confirmThen("Reset the night back to the intro? (Your card edits stay.)", host.resetNight)}>
               Reset night
             </button>

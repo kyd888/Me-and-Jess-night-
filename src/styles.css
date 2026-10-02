@@ -618,3 +618,24 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.2s !important; }
   .flyer, .cloud { display: none; }
 }
+
+/* ── Handoff (QR for Jess) ────────────────────── */
+.handoff { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px 0 10px; }
+.handoff .display { margin-bottom: 30px; }
+.qr-card {
+  position: relative;
+  width: min(300px, 82vw);
+  padding: 26px 26px 12px;
+  background: var(--paper);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transform: rotate(-1deg);
+}
+.qr-card.rise { animation-name: rise-tilt; --tilt: -1deg; }
+.qr svg { display: block; width: 100%; height: auto; }
+.qr { aspect-ratio: 1; }
+.qr-bird { position: absolute; width: 58px; top: -38px; right: 18px; animation: bob 3.6s ease-in-out infinite; }
+.qr-caption { margin: 10px 0 0; font-size: 22px; color: var(--ink-soft); }
+.handoff-actions { margin-top: 34px; }
+.handoff-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.link-btn { font-size: 14px; font-weight: 700; color: var(--cream); text-decoration: underline; text-underline-offset: 3px; padding: 6px; }
