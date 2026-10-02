@@ -165,3 +165,20 @@ html:has(.kyd), html:has(.kyd) body { background: #1b1020; }
   box-shadow: 0 10px 30px -10px #000;
   animation: fade 0.2s both;
 }
+
+/* Card rounds */
+.k-pink { color: #f7a8c0; }
+.k-picked { border: 2px solid #f28bab; background: #301829; }
+.k-picked.is-new { animation: k-new 0.8s ease-in-out 6; }
+@keyframes k-new { 50% { background: #5a2152; box-shadow: 0 0 0 8px rgba(242, 139, 171, 0.25); } }
+.k-facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 12px 0 0; font-size: 15px; }
+.k-facts dt { color: #a98a9c; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding-top: 2px; }
+.k-facts dd { margin: 0; }
+.k-under { margin: 8px 0 12px; padding-left: 20px; display: grid; gap: 6px; font-size: 15px; }
+.k-face { display: inline-block; min-width: 28px; padding: 1px 6px; margin-right: 4px; border-radius: 6px; background: #4a1f3e; font-size: 12px; text-align: center; }
+.k-linkbtn { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.k-cat { display: flex; gap: 12px; align-items: center; text-align: left; padding: 12px; border-radius: 14px; background: #2e1b2a; color: #f6e9ef; }
+.k-cat.is-off { opacity: 0.5; }
+.k-cat:disabled { opacity: 0.25; }
+.k-cat-icon { font-size: 26px; }
+.k-backup.is-off { opacity: 0.5; }

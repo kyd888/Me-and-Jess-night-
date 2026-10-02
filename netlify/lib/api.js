@@ -17,7 +17,9 @@ const jessKey = (sid) => `jess-${sid}`;
 
 async function load(store, sid) {
   const [state, jess] = await Promise.all([store.get(stateKey(sid)), store.get(jessKey(sid))]);
-  return { state: state || freshState(sid), jess: jess || freshJess() };
+  // Anything saved by an older version of the app starts fresh.
+  const usable = state && Array.isArray(state.plans) && Array.isArray(state.opening);
+  return { state: usable ? state : freshState(sid), jess: { ...freshJess(), ...(jess || {}) } };
 }
 
 /** /api/state: Jess's phone. GET = what she sees; POST = her requests/reactions. */
@@ -32,7 +34,7 @@ export async function handleGuest(req, store) {
     if (req.method === "POST") {
       const action = await req.json();
       const { state, jess } = await load(store, sid);
-      const next = applyJessAction(jess, action);
+      const next = applyJessAction(jess, action, state);
       await store.set(jessKey(sid), next);
       return json(guestView(state, next));
     }
@@ -56,7 +58,7 @@ export async function handleHost(req, store, envPin) {
     if (req.method === "POST") {
       const action = await req.json();
       const { state, jess } = await load(store, sid);
-      const next = applyHostAction(state, action);
+      const next = applyHostAction(state, action, jess);
       await store.set(stateKey(sid), next);
       if (action.type === "reset") {
         await store.set(jessKey(sid), freshJess());

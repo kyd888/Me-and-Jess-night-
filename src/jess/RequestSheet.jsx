@@ -49,7 +49,10 @@ export default function RequestSheet({ me, onSend, onClose }) {
           </>
         )}
         {phase === "sent" && (
-          <p className="sheet-big rise">{surprise ? "Correct answer." : `Request sent to ${me} 👀`}</p>
+          <>
+            <img className="sticker sticker-center pop-in" src={surprise ? "/memes/text_stickers/correct_answer.png" : "/memes/text_stickers/i_know_thats_right.png"} alt="" />
+            <p className="sheet-big rise">{surprise ? "Correct answer." : `Request sent to ${me} 👀`}</p>
+          </>
         )}
         {phase === "done" && (
           <p className="sheet-big hand rise">

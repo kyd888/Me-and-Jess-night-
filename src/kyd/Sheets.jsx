@@ -1,7 +1,5 @@
 import { useState } from "react";
 
-const CATEGORIES = ["DINNER", "DESSERT", "GAMES", "COZY", "COFFEE", "RANDOM", "AT HOME"];
-
 export function Sheet({ title, onClose, children }) {
   return (
     <div className="k-sheet-backdrop" onClick={onClose}>
@@ -24,147 +22,164 @@ export function TextSheet({ title, note, presets, onSend, onClose }) {
       <p className="k-muted small">{note}</p>
       <div className="k-chips">
         {presets.map((p) => (
-          <button key={p} className="k-chip" onClick={() => onSend(p)}>
-            {p}
-          </button>
+          <button key={p} className="k-chip" onClick={() => onSend(p)}>{p}</button>
         ))}
       </div>
       <textarea className="k-input" rows={2} placeholder="or type your own…" value={text} onChange={(e) => setText(e.target.value)} maxLength={200} />
-      <button className="k-btn k-primary wide" disabled={!text.trim()} onClick={() => onSend(text.trim())}>
-        Send
-      </button>
+      <button className="k-btn k-primary wide" disabled={!text.trim()} onClick={() => onSend(text.trim())}>Send</button>
     </Sheet>
   );
 }
 
-/** The private backup bank. */
-export function BackupSheet({ state, categories, hasCurrent, onUse, onClose }) {
-  const [cat, setCat] = useState(categories?.[0] || "DINNER");
-  const list = state.backups.filter((b) => b.category === cat);
-  const used = new Set(state.usedBackups);
+/** CHOOSE CATEGORY MYSELF: every category, with why the engine would skip it. */
+export function CategorySheet({ options, title = "Choose category", onPick, onClose }) {
+  return (
+    <Sheet title={title} onClose={onClose}>
+      <p className="k-muted small">Jess never sees this. Greyed out = the engine would skip it, but you can still force it.</p>
+      <div className="k-col">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            className={`k-cat ${o.eligible ? "" : "is-off"}`}
+            disabled={o.available === 0}
+            onClick={() => (o.eligible || window.confirm(`${o.reason}. Use it anyway?`)) && onPick(o.id)}
+          >
+            <span className="k-cat-icon">{o.icon}</span>
+            <span>
+              <strong>{o.id}</strong> <span className="k-muted">“{o.label}”</span>
+              <span className="k-muted small block">
+                {o.available} open option{o.available === 1 ? "" : "s"}
+                {o.reason ? ` · ${o.reason}` : ""}
+              </span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </Sheet>
+  );
+}
+
+/** Pick a specific plan from the private library (for CHANGE PLAN / requests). */
+export function PlanPickerSheet({ state, categories, startCategory, suggested, actionLabel, onPick, onClose }) {
+  const cats = Object.keys(categories);
+  const [cat, setCat] = useState(suggested?.length ? "SUGGESTED" : startCategory || cats[0]);
+  const done = new Set(state.rounds.map((r) => r.planId));
+  const list = cat === "SUGGESTED" ? suggested.map((id) => state.plans.find((p) => p.id === id)).filter(Boolean) : state.plans.filter((p) => p.category === cat);
   return (
     <Sheet title="Change plan" onClose={onClose}>
       <div className="k-tabs">
-        {CATEGORIES.map((c) => (
+        {suggested?.length > 0 && (
+          <button className={`k-tab ${cat === "SUGGESTED" ? "is-on" : ""}`} onClick={() => setCat("SUGGESTED")}>SUGGESTED</button>
+        )}
+        {cats.map((c) => (
           <button key={c} className={`k-tab ${c === cat ? "is-on" : ""}`} onClick={() => setCat(c)}>
-            {c}
+            {categories[c].icon} {c}
           </button>
         ))}
       </div>
       <div className="k-backups">
-        {list.map((b) => (
-          <div key={b.id} className="k-backup">
+        {list.map((p) => (
+          <div key={p.id} className={`k-backup ${p.enabled === false ? "is-off" : ""}`}>
             <p className="k-title">
-              {b.name} {used.has(b.id) && <span className="k-tag">used</span>}
+              {p.icon} {p.name} {done.has(p.id) && <span className="k-tag">done</span>}
             </p>
-            <p className="k-muted">{b.description}</p>
-            <p className="k-muted small">
-              ~{b.estimatedDuration} min · {b.costLevel} · open until {b.openUntil}
-              {b.address ? ` · ${b.address}` : ""}
-            </p>
-            {b.reasonJessMightLikeIt && <p className="k-note">{b.reasonJessMightLikeIt}</p>}
-            <div className="k-row gap">
-              <button className="k-btn k-primary" onClick={() => onUse(b.id, "next")}>Make it next</button>
-              {hasCurrent && (
-                <button className="k-btn" onClick={() => onUse(b.id, "replace")}>Replace current</button>
-              )}
-            </div>
+            <p className="k-muted">{p.place} · ~{p.duration} min · {p.cost}{p.closesAt ? ` · closes ${p.closesAt}` : ""}</p>
+            {p.hostNotes && <p className="k-note">{p.hostNotes}</p>}
+            <button className="k-btn k-primary" onClick={() => onPick(p.id)}>{actionLabel}</button>
           </div>
         ))}
       </div>
-      <p className="k-muted small">Jess never sees this list. Nothing shows on her phone until you tap REVEAL.</p>
+      <p className="k-muted small">Nothing changes on her phone except "plot twist 😭". The new place stays secret until you tap REVEAL.</p>
     </Sheet>
   );
 }
 
-const STATUSES = ["at_home", "leaving", "traveling", "at_destination", "transition", "dessert", "ending"];
-const ANIMATIONS = ["door", "gift", "car", "ticket", "bowl", "sparkle", "sweet", "moon", "coffee", "game", "bird"];
+const REVEAL_MODES = ["full", "hint", "secret"];
 
-/** Add or edit a step. */
-export function EditStepSheet({ step, onSave, onClose }) {
-  const [s, setS] = useState(
+/** Add or edit a plan in the card library. */
+export function EditPlanSheet({ plan, categories, onSave, onClose }) {
+  const [p, setP] = useState(
     () =>
-      step || {
-        id: `step-${Math.random().toString(36).slice(2, 8)}`,
-        status: "at_destination",
-        eyebrow: "",
-        animation: "sparkle",
-        title: "",
-        body: "",
-        hint: "",
-        button: "okay 👀",
-        stamp: "",
-        memory: "",
-        estimatedMinutes: 30,
+      plan || {
+        id: `custom-${Math.random().toString(36).slice(2, 8)}`,
+        category: "FUN",
+        name: "",
+        place: "",
+        address: "",
+        mapsLink: "",
+        duration: 30,
+        cost: "$",
+        closesAt: null,
+        revealMode: "hint",
+        jessFull: "",
+        jessHint: "",
         hostNotes: "",
-        allowChange: true,
-        destination: null,
+        caption: "",
+        icon: "✦",
+        backup: "",
+        enabled: true,
       }
   );
-  const set = (k, v) => setS((x) => ({ ...x, [k]: v }));
-  const setD = (k, v) => setS((x) => ({ ...x, destination: { ...(x.destination || {}), [k]: v } }));
-
-  const field = (label, value, onChange, opts = {}) => (
+  const set = (k, v) => setP((x) => ({ ...x, [k]: v }));
+  const field = (label, key, opts = {}) => (
     <label className="k-field">
       <span>{label}</span>
       {opts.area ? (
-        <textarea className="k-input" rows={2} value={value ?? ""} onChange={(e) => onChange(e.target.value)} />
+        <textarea className="k-input" rows={2} value={p[key] ?? ""} onChange={(e) => set(key, e.target.value)} />
       ) : (
-        <input className="k-input" type={opts.type || "text"} value={value ?? ""} onChange={(e) => onChange(opts.type === "number" ? Number(e.target.value) : e.target.value)} />
+        <input
+          className="k-input"
+          type={opts.type || "text"}
+          value={p[key] ?? ""}
+          placeholder={opts.placeholder}
+          onChange={(e) => set(key, opts.type === "number" ? Number(e.target.value) : e.target.value || (opts.nullable ? null : ""))}
+        />
       )}
     </label>
   );
 
-  const save = () => {
-    const out = { ...s };
-    if (out.destination && !out.destination.name) out.destination = null;
-    onSave(out);
-  };
-
   return (
-    <Sheet title={step ? "Edit step" : "New step"} onClose={onClose}>
-      <p className="k-section">Jess sees</p>
-      {field("Small label (e.g. Chapter 3)", s.eyebrow, (v) => set("eyebrow", v))}
-      {field("Title", s.title, (v) => set("title", v))}
-      {field("Line under it", s.body, (v) => set("body", v))}
-      {field("Hint (sticky note, optional)", s.hint, (v) => set("hint", v))}
-      {field("Her button", s.button, (v) => set("button", v))}
+    <Sheet title={plan ? "Edit plan" : "New plan"} onClose={onClose}>
       <label className="k-field">
-        <span>Picture</span>
-        <select className="k-input" value={s.animation} onChange={(e) => set("animation", e.target.value)}>
-          {ANIMATIONS.map((a) => (
-            <option key={a}>{a}</option>
+        <span>Category</span>
+        <select className="k-input" value={p.category} onChange={(e) => set("category", e.target.value)}>
+          {Object.keys(categories).map((c) => (
+            <option key={c}>{c}</option>
           ))}
         </select>
       </label>
       <label className="k-check">
-        <input type="checkbox" checked={s.allowChange !== false} onChange={(e) => set("allowChange", e.target.checked)} /> Show "not feeling this?"
+        <input type="checkbox" checked={p.enabled !== false} onChange={(e) => set("enabled", e.target.checked)} /> Can be dealt tonight
+      </label>
+      <label className="k-check">
+        <input type="checkbox" checked={!!p.meal} onChange={(e) => set("meal", e.target.checked)} /> This is a real meal
       </label>
 
-      <p className="k-section">Destination (hidden until you reveal)</p>
-      {field("Name", s.destination?.name, (v) => setD("name", v))}
-      {field("Note she sees on reveal", s.destination?.note, (v) => setD("note", v))}
-      {field("Address (private)", s.destination?.address, (v) => setD("address", v))}
-      {field("Maps link (private)", s.destination?.mapsLink, (v) => setD("mapsLink", v))}
-      {field("Open until (private)", s.destination?.openUntil, (v) => setD("openUntil", v))}
+      <p className="k-section">Only you see</p>
+      {field("Plan name", "name")}
+      {field("Place", "place")}
+      {field("Address", "address")}
+      {field("Maps link", "mapsLink")}
+      {field("Duration (min)", "duration", { type: "number" })}
+      {field("Cost ($ / $$ / $$$ / free)", "cost")}
+      {field("Closes at (24h HH:MM, blank = late)", "closesAt", { placeholder: "21:00", nullable: true })}
+      {field("What to do", "hostNotes", { area: true })}
 
-      <p className="k-section">Only you</p>
+      <p className="k-section">Jess sees after flipping</p>
       <label className="k-field">
-        <span>Status</span>
-        <select className="k-input" value={s.status} onChange={(e) => set("status", e.target.value)}>
-          {STATUSES.map((a) => (
-            <option key={a}>{a}</option>
+        <span>Reveal mode</span>
+        <select className="k-input" value={p.revealMode} onChange={(e) => set("revealMode", e.target.value)}>
+          {REVEAL_MODES.map((m) => (
+            <option key={m}>{m}</option>
           ))}
         </select>
       </label>
-      {field("Estimated minutes", s.estimatedMinutes, (v) => set("estimatedMinutes", v), { type: "number" })}
-      {field("Notes to self", s.hostNotes, (v) => set("hostNotes", v), { area: true })}
-      {field("Scrapbook label (e.g. Stop 03)", s.stamp, (v) => set("stamp", v))}
-      {field("Scrapbook memory (default: destination name)", s.memory, (v) => set("memory", v))}
+      {field("Full reveal text", "jessFull", { placeholder: "ice cream run 🍦" })}
+      {field("Hint text", "jessHint", { placeholder: "we're getting something sweet 👀" })}
+      {field("Icon (emoji)", "icon")}
+      {field("Scrapbook caption", "caption", { placeholder: "you demolished that btw" })}
 
-      <button className="k-btn k-primary wide" disabled={!s.title.trim()} onClick={save}>
-        Save step
-      </button>
+      <button className="k-btn k-primary wide" disabled={!p.name.trim()} onClick={() => onSave(p)}>Save plan</button>
     </Sheet>
   );
 }

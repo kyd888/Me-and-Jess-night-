@@ -5,13 +5,15 @@ import { Bird } from "../components/icons.jsx";
 import { guestApi, local, usePoll } from "../lib/api.js";
 import Waiting from "./Waiting.jsx";
 import Onboarding from "./Onboarding.jsx";
-import StepView from "./StepView.jsx";
+import Beat from "./Beat.jsx";
+import Round from "./Round.jsx";
+import Between from "./Between.jsx";
 import RequestSheet from "./RequestSheet.jsx";
 import Scrapbook from "./Scrapbook.jsx";
 import Finale from "./Finale.jsx";
 import { Intermission, MessageOverlay } from "./Overlays.jsx";
 
-/** Jess Mode: a calm little storybook that Kyd moves from his phone. */
+/** Jess Mode: a little card game Kyd secretly runs from his phone. */
 export default function Jess() {
   const { data, setData, error } = usePoll(guestApi.get, 2500);
   const [toast, setToast] = useState(null);
@@ -45,12 +47,10 @@ export default function Jess() {
     if (!data) return;
     const p = prev.current;
     if (p && p.status === data.status) {
-      if (data.scrapbook.length > p.scrapbook.length) showToast("+1 ticket for your night 🎟️");
-      else if (data.step && p.step?.id === data.step.id && data.step.clues.length > p.step.clues.length) showToast("new clue 👀");
+      if (data.scrapbook.length > p.scrapbook.length) showToast("+1 card in your scrapbook 🎟️");
+      else if (data.clues.length > p.clues.length) showToast("new clue 👀");
     }
-    if (data.message && data.message.id !== p?.message?.id && data.message.id !== seenMsg) {
-      navigator.vibrate?.(60);
-    }
+    if (data.message && data.message.id !== p?.message?.id && data.message.id !== seenMsg) navigator.vibrate?.(60);
     prev.current = data;
   }, [data, seenMsg]);
 
@@ -59,20 +59,21 @@ export default function Jess() {
     local.set("jess-seen-message", data.message.id);
   };
 
-  const react = (text) => guestApi.send({ type: "react", stepId: data.step?.id, text }).catch(() => {});
-  const request = async (mood) => {
-    const next = await guestApi.send({ type: "request", mood, stepId: data.step?.id });
-    setData(next);
+  const react = (text) => guestApi.send({ type: "react", roundId: data.round?.id || data.beat?.id, text }).catch(() => {});
+  const request = async (mood) => setData(await guestApi.send({ type: "request", mood }));
+  const pick = async (cardId) => {
+    const view = await guestApi.send({ type: "pick", roundId: data.round.id, cardId });
+    setData(view);
+    return view;
   };
 
-  let screen;
-  let key;
+  let screen = null;
+  let key = "loading";
   if (!data) {
-    key = "loading";
     screen = (
       <section className="center-screen">
         <Bird className="loading-bird" />
-        {error && <p className="tiny">can't reach {me}'s server… trying again</p>}
+        {error && <p className="tiny center-text">can't reach {me}'s server… trying again</p>}
       </section>
     );
   } else if (data.status === "waiting") {
@@ -82,14 +83,29 @@ export default function Jess() {
     key = "finale";
     screen = <Finale finale={data.finale} scrapbook={data.scrapbook} />;
   } else if (onboard === null) {
-    key = "loading";
     screen = null;
   } else if (onboard < 2) {
     key = `onboard-${onboard}`;
     screen = <Onboarding step={onboard} onNext={nextOnboard} me={me} />;
-  } else if (data.step) {
-    key = `step-${data.step.id}`;
-    screen = <StepView step={data.step} me={me} nightId={data.nightId} onReact={react} onNotFeelingIt={() => setSheet("request")} />;
+  } else if (data.stage === "opening" && data.beat) {
+    key = `beat-${data.beat.id}`;
+    screen = <Beat beat={data.beat} clues={data.clues} me={me} nightId={data.nightId} onReact={react} />;
+  } else if (data.stage === "round" && data.round) {
+    key = `round-${data.round.id}`;
+    screen = (
+      <Round
+        round={data.round}
+        clues={data.clues}
+        me={me}
+        nightId={data.nightId}
+        onPick={pick}
+        onReact={react}
+        onNotFeelingIt={() => setSheet("request")}
+      />
+    );
+  } else {
+    key = `between-${data.scrapbook.length}`;
+    screen = <Between me={me} clues={data.clues} />;
   }
 
   const inStory = data?.status === "started" && onboard >= 2;
@@ -103,7 +119,7 @@ export default function Jess() {
           <header className="topbar">
             <button className="trail" onClick={() => setSheet("scrapbook")} aria-label="your night so far">
               {data.scrapbook.map((t) => (
-                <Bird key={t.stepId} className="trail-bird" />
+                <Bird key={t.id} className="trail-bird" />
               ))}
               <span className="trail-now" />
               {data.scrapbook.length > 0 && <span className="trail-count">{data.scrapbook.length}</span>}

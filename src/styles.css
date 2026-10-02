@@ -445,7 +445,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   background: var(--paper-2);
   border-left: 2px dashed rgba(201, 97, 138, 0.35);
 }
-.memory-time { font-size: 12px; font-weight: 800; color: var(--berry); }
+.memory-time { font-size: 11px; font-weight: 800; color: var(--berry); }
 .memory-no { font-family: var(--font-display); font-style: italic; font-size: 20px; color: var(--dusty); }
 .sheet-tall .tickets-list { margin-bottom: 4px; }
 
@@ -500,3 +500,81 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.2s !important; }
   .flyer, .cloud { display: none; }
 }
+
+/* ── Card rounds ──────────────────────────────── */
+.round { flex: 1; display: flex; flex-direction: column; }
+.round-head { margin: 8px 0 26px; }
+.deck { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.deck-2 { grid-template-columns: 1fr 1fr; padding: 0 12px; }
+.deck-3 { grid-template-columns: repeat(3, 1fr); }
+.deck-4 { grid-template-columns: 1fr 1fr; padding: 0 18px; }
+.deck .deal { transform-origin: bottom center; }
+
+.mystery {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 18px;
+  background: radial-gradient(120% 90% at 50% 0%, #c95b8f, #6a2459 78%);
+  border: 2px solid rgba(255, 225, 234, 0.6);
+  box-shadow: inset 0 0 0 5px rgba(255, 255, 255, 0.08), 0 14px 26px -12px rgba(60, 10, 40, 0.75);
+  transform: rotate(var(--tilt));
+  transition: transform 0.35s cubic-bezier(0.2, 1.3, 0.4, 1), opacity 0.4s ease, filter 0.4s ease;
+}
+.mystery:active { transform: rotate(var(--tilt)) scale(0.95); }
+.mystery.is-chosen { transform: rotate(0) scale(1.08) translateY(-8px); box-shadow: 0 0 0 3px var(--gold), 0 0 30px rgba(255, 213, 158, 0.7); }
+.mystery.is-gone { opacity: 0; transform: rotate(10deg) translateY(30px) scale(0.85); filter: blur(3px); }
+.mystery-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 22% 18%, #fff, transparent),
+    radial-gradient(1px 1px at 78% 30%, #fff, transparent),
+    radial-gradient(1.4px 1.4px at 30% 82%, #fff, transparent),
+    radial-gradient(1px 1px at 70% 72%, #fff, transparent);
+  opacity: 0.85;
+}
+.face-art { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--cream); }
+.face-icon { font-size: 34px; line-height: 1; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25)); }
+.face-text { font-size: 22px; line-height: 1; text-align: center; padding: 0 6px; }
+.face-art.big .face-icon { font-size: 72px; }
+.face-art.big .face-text { font-size: 40px; }
+
+.big-flip { margin: 0 auto; width: min(100%, 330px); }
+.big-flip .face { min-height: 380px; }
+.mystery-back { background: radial-gradient(120% 90% at 50% 0%, #c95b8f, #6a2459 78%); border: 2px solid rgba(255, 225, 234, 0.6); display: grid; place-items: center; }
+.reveal-card { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 26px 22px; border-left: none; }
+.reveal-line { margin: 4px 0 10px; font-family: var(--font-display); font-style: italic; font-size: 22px; line-height: 1.2; color: var(--berry); text-wrap: balance; }
+.reveal-icon { font-size: 54px; line-height: 1.1; margin: 4px 0 8px; }
+.reveal-card .reveal-title { font-size: 28px; }
+.reveal-sub { margin: 10px 0 0; font-size: 15px; font-weight: 700; color: var(--ink-soft); }
+
+.meme-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(60, 15, 50, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fade 0.25s ease both;
+}
+.meme-pop img { width: min(62vw, 250px); border-radius: 22px; box-shadow: var(--shadow); animation: pop-in 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.meme-line { margin: 0; padding: 8px 18px; border-radius: 999px; background: var(--paper); color: var(--ink); font-weight: 800; font-size: 18px; animation: rise 0.5s 0.2s both; }
+
+.sticker { display: block; max-width: 200px; height: auto; margin: 14px auto 0; border-radius: 12px; }
+.sticker-center { margin: 6px auto 0; max-width: 220px; }
+.sticker-tilt { max-width: 120px; margin: -44px 0 10px auto; transform: rotate(6deg); }
+.easter-cat { position: absolute; top: 14%; right: 8%; width: 120px; border-radius: 20px; box-shadow: var(--shadow); transform: rotate(6deg); }
+.center-text { text-align: center; }
+
+.memory-icon { font-size: 22px; line-height: 1; }
+.between { text-align: center; align-items: center; }
+.between .scrap { align-self: center; }

@@ -1,18 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { fmtTime, hostApi, local, sessionId, usePoll } from "../lib/api.js";
-import { BackupSheet, EditStepSheet, TextSheet } from "./Sheets.jsx";
-import PlanList from "./PlanList.jsx";
+import { CategorySheet, EditPlanSheet, PlanPickerSheet, TextSheet } from "./Sheets.jsx";
+import Library from "./Library.jsx";
 import "./kyd.css";
 
 const MESSAGE_PRESETS = ["Time to go.", "Look at Kyd.", "One more stop.", "Check the car.", "Trust me.", "Don't open that yet.", "Okay you can look now."];
-const CLUE_PRESETS = ["it's close.", "you've never been here.", "it involves food.", "bring a jacket.", "you're gonna like this one.", "think birds. (not really.)"];
-
-const STATUS_LABEL = {
-  waiting: "Waiting for Jess",
-  started: "Date in progress",
-  finished: "Night finished",
-};
+const CLUE_PRESETS = ["it's close.", "you've never been here.", "it involves food.", "bring a jacket.", "you're gonna like this one.", "be so fr, you'll never guess 😭"];
 
 function useNow(ms = 15000) {
   const [now, setNow] = useState(Date.now());
@@ -27,6 +21,43 @@ const mins = (ms) => {
   const m = Math.max(0, Math.floor(ms / 60000));
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`;
 };
+
+/**
+ * A soft two-note chime when Jess picks a card. iPhones don't support
+ * vibration from websites, so this + the flashing panel is the alert.
+ * Audio unlocks on your first tap anywhere in the Control Room.
+ */
+function useChime() {
+  const ctx = useRef(null);
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        ctx.current = ctx.current || new (window.AudioContext || window.webkitAudioContext)();
+        ctx.current.resume?.();
+      } catch {
+        /* no audio, no problem */
+      }
+    };
+    window.addEventListener("pointerdown", unlock);
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, []);
+  return () => {
+    navigator.vibrate?.([120, 60, 120]);
+    const c = ctx.current;
+    if (!c) return;
+    [880, 1320].forEach((f, i) => {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, c.currentTime + i * 0.16);
+      g.gain.exponentialRampToValueAtTime(0.25, c.currentTime + i * 0.16 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + i * 0.16 + 0.35);
+      o.connect(g).connect(c.destination);
+      o.start(c.currentTime + i * 0.16);
+      o.stop(c.currentTime + i * 0.16 + 0.4);
+    });
+  };
+}
 
 function PinGate({ onUnlock }) {
   const [pin, setPin] = useState("");
@@ -49,19 +80,8 @@ function PinGate({ onUnlock }) {
     <div className="kyd kyd-gate">
       <form onSubmit={submit} className="gate">
         <p className="k-kicker">Control Room</p>
-        <input
-          className="pin-input"
-          type="password"
-          inputMode="numeric"
-          autoComplete="current-password"
-          placeholder="PIN"
-          value={pin}
-          onChange={(e) => setPin(e.target.value)}
-          autoFocus
-        />
-        <button className="k-btn k-primary" disabled={!pin || busy}>
-          {busy ? "…" : "Unlock"}
-        </button>
+        <input className="pin-input" type="password" inputMode="numeric" autoComplete="current-password" placeholder="PIN" value={pin} onChange={(e) => setPin(e.target.value)} autoFocus />
+        <button className="k-btn k-primary" disabled={!pin || busy}>{busy ? "…" : "Unlock"}</button>
         {err && <p className="k-err">{err}</p>}
       </form>
     </div>
@@ -75,24 +95,42 @@ export default function Kyd() {
 }
 
 function ControlRoom({ pin, onLock }) {
-  const { data, setData, error } = usePoll(() => hostApi.get(pin), 2500);
-  const [sheet, setSheet] = useState(null); // {type, ...}
+  const { data, setData, error } = usePoll(() => hostApi.get(pin), 2000);
+  const [sheet, setSheet] = useState(null);
   const [flash, setFlash] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [waitPrompt, setWaitPrompt] = useState(false);
+  const [justPicked, setJustPicked] = useState(false);
+  const lastPick = useRef(undefined);
+  const chime = useChime();
   const now = useNow();
 
   useEffect(() => {
     if (error?.status === 401) onLock();
   }, [error, onLock]);
 
+  // Jess just flipped a card → chime + highlight.
+  useEffect(() => {
+    if (!data) return;
+    const key = data.pick ? `${data.state.round?.id}-${data.pick.cardId}` : null;
+    if (lastPick.current !== undefined && key && key !== lastPick.current) {
+      chime();
+      setJustPicked(true);
+      setTimeout(() => setJustPicked(false), 8000);
+    }
+    lastPick.current = key;
+  }, [data, chime]);
+
+  const say = (text) => {
+    setFlash(text);
+    setTimeout(() => setFlash(null), 2000);
+  };
+
   const act = async (action, okText) => {
     setBusy(true);
     try {
       setData(await hostApi.send(pin, action));
-      if (okText) {
-        setFlash(okText);
-        setTimeout(() => setFlash(null), 2000);
-      }
+      if (okText) say(okText);
       return true;
     } catch (e) {
       alert(e.message);
@@ -110,18 +148,15 @@ function ControlRoom({ pin, onLock }) {
     );
   }
 
-  const { state, requests, reactions, moods } = data;
-  const steps = state.steps;
-  const curIdx = steps.findIndex((s) => s.id === state.currentId);
-  const cur = steps[curIdx];
-  const next = curIdx >= 0 ? steps[curIdx + 1] : state.status === "waiting" ? steps[0] : null;
-  const curEntered = [...state.history].reverse().find((h) => h.stepId === state.currentId)?.startedAt;
+  const { state, pick, activePlanId, nextPreview, categoryOptions, categories, requests, reactions } = data;
+  const planById = Object.fromEntries(state.plans.map((p) => [p.id, p]));
+  const round = state.round;
+  const plan = activePlanId ? planById[activePlanId] : null;
   const openRequests = requests.filter((r) => !r.handled).reverse();
-  const byId = Object.fromEntries(state.backups.map((b) => [b.id, b]));
-  const lastReaction = [...reactions].reverse().find((r) => r.stepId === state.currentId);
-  const revealed = cur && state.revealed[cur.id];
-
-  const statusLabel = state.status === "started" && state.paused ? "Paused" : STATUS_LABEL[state.status];
+  const lastReaction = reactions[reactions.length - 1];
+  const statusLabel = state.status === "started" ? (state.paused ? "Paused" : "Date in progress") : state.status === "waiting" ? "Waiting for Jess" : "Night finished";
+  const partStarted = round ? (pick ? pick.at : round.createdAt) : state.lastBeatAt;
+  const catLabel = (id) => (id ? `${categories[id]?.icon} ${id}` : "—");
 
   return (
     <div className="kyd">
@@ -130,32 +165,20 @@ function ControlRoom({ pin, onLock }) {
           <p className="k-kicker">Tonight with Jess</p>
           <span className={`k-pill k-${state.paused ? "paused" : state.status}`}>{statusLabel}</span>
         </div>
-        <button className="k-icon" onClick={() => setSheet({ type: "menu" })} aria-label="menu">
-          ⋯
-        </button>
+        <button className="k-icon" onClick={() => setSheet({ type: "menu" })} aria-label="menu">⋯</button>
       </header>
 
+      {/* ── Before she arrives ── */}
       {state.status === "waiting" && (
         <>
           <section className="k-card k-hero">
             <p className="k-label">Status</p>
             <p className="k-big">Waiting for Jess</p>
-            <p className="k-muted">Her page says "Your night isn't ready yet." Tap the button when she's actually here.</p>
-            <button
-              className="k-btn k-here"
-              disabled={busy}
-              onClick={() => window.confirm("Jess is here? This starts the night on her phone.") && act({ type: "start" }, "The night has started 🩷")}
-            >
+            <p className="k-muted">Her page says "Your night isn't ready yet." Tap this when she's actually here.</p>
+            <button className="k-btn k-here" disabled={busy} onClick={() => window.confirm("Jess is here? This starts the night on her phone.") && act({ type: "start" }, "The night has started 🩷")}>
               JESS IS HERE 🩷
             </button>
           </section>
-          {next && (
-            <section className="k-card">
-              <p className="k-label">First thing she'll see</p>
-              <p className="k-title">{next.title}</p>
-              {next.hostNotes && <p className="k-note">{next.hostNotes}</p>}
-            </section>
-          )}
           <JessLink />
         </>
       )}
@@ -166,10 +189,14 @@ function ControlRoom({ pin, onLock }) {
             <RequestCard
               key={r.id}
               request={r}
-              byId={byId}
+              planById={planById}
               busy={busy}
-              onUse={(backupId) => act({ type: "useBackup", backupId, mode: "next", requestId: r.id }, "Added as the next stop ✓")}
-              onChoose={() => setSheet({ type: "backup", requestId: r.id, categories: moods[r.mood]?.categories })}
+              onUse={(planId) =>
+                pick
+                  ? act({ type: "swapPlan", planId, requestId: r.id }, "Plan swapped ✓ (still secret)")
+                  : act({ type: "handleRequest", requestId: r.id, result: "used" }).then(() => act({ type: "deal", category: planById[planId].category }, "Dealt new cards ✓"))
+              }
+              onChoose={() => setSheet({ type: "planPicker", requestId: r.id, suggested: r.suggestions })}
               onIgnore={() => act({ type: "handleRequest", requestId: r.id, result: "ignored" })}
             />
           ))}
@@ -184,64 +211,151 @@ function ControlRoom({ pin, onLock }) {
               <strong>{mins(now - state.startedAt)}</strong>
             </div>
             <div>
-              <span className="k-label">This step</span>
+              <span className="k-label">This part</span>
               <strong>
-                {mins(now - curEntered)}
-                {cur?.estimatedMinutes ? <small> / ~{cur.estimatedMinutes}</small> : null}
+                {mins(now - (partStarted || now))}
+                {plan ? <small> / ~{plan.duration}</small> : null}
               </strong>
             </div>
           </section>
 
-          {cur && (
+          {/* ── Opening beats ── */}
+          {state.stage === "opening" && (
             <section className="k-card k-now">
-              <div className="k-row">
-                <p className="k-label">
-                  Now · {curIdx + 1} of {steps.length} · {cur.status}
-                </p>
-                {cur.destination && <span className={`k-tag ${revealed ? "k-tag-on" : ""}`}>{revealed ? "revealed" : "hidden from Jess"}</span>}
-              </div>
-              <p className="k-title">{cur.title}</p>
-              {cur.destination && <Destination d={cur.destination} />}
-              {cur.hostNotes && <p className="k-note">{cur.hostNotes}</p>}
-              {lastReaction && (
-                <p className="k-reaction">
-                  Jess tapped "{lastReaction.text}" · {fmtTime(lastReaction.at)}
-                </p>
+              <p className="k-label">Opening · {state.openingIndex + 1} of {state.opening.length}</p>
+              <p className="k-title">{state.opening[state.openingIndex]?.title}</p>
+              <p className="k-note">{state.opening[state.openingIndex]?.hostNotes}</p>
+              {lastReaction && <p className="k-reaction">Jess tapped "{lastReaction.text}" · {fmtTime(lastReaction.at)}</p>}
+              <button className="k-btn k-primary k-advance" disabled={busy} onClick={() => act({ type: "nextBeat" }, "Next ✓")}>
+                {state.openingIndex + 1 < state.opening.length ? "NEXT →" : "DONE WITH THE OPENING →"}
+              </button>
+            </section>
+          )}
+
+          {/* ── Between rounds: Generate next part? ── */}
+          {state.stage === "between" && (
+            <section className="k-card k-hero">
+              {!waitPrompt ? (
+                <>
+                  <p className="k-big">Generate next part of night?</p>
+                  {nextPreview ? (
+                    <p className="k-muted">
+                      Next category: <strong className="k-pink">{catLabel(nextPreview)}</strong> · “{categories[nextPreview]?.label}”
+                    </p>
+                  ) : (
+                    <p className="k-muted">Nothing fits anymore. Probably time to finish the night 🩷</p>
+                  )}
+                  <div className="k-col">
+                    {nextPreview && (
+                      <button className="k-btn k-primary k-advance" disabled={busy} onClick={() => act({ type: "deal" }, "Cards dealt to her phone 🃏")}>
+                        YES
+                      </button>
+                    )}
+                    <button className="k-btn" onClick={() => setWaitPrompt(true)}>WAIT</button>
+                    <button className="k-btn" onClick={() => setSheet({ type: "category", mode: "deal" })}>CHOOSE CATEGORY MYSELF</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="k-muted">Taking a breather. Her phone says "phone down, enjoy this part."</p>
+                  <button className="k-btn k-primary wide" onClick={() => setWaitPrompt(false)}>Ready: generate next part</button>
+                </>
               )}
             </section>
           )}
 
-          <button className="k-btn k-primary k-advance" disabled={busy} onClick={() => act({ type: "advance" }, next ? "Story advanced →" : "Night finished 🩷")}>
-            {next ? "ADVANCE STORY →" : "ADVANCE → FINALE"}
-          </button>
+          {/* ── Round: she's choosing ── */}
+          {state.stage === "round" && round && !pick && (
+            <section className="k-card k-now">
+              <p className="k-label">Round {round.n} · {catLabel(round.category)}</p>
+              <p className="k-big">Jess is choosing a card…</p>
+              <p className="k-muted small">Under the cards (left → right on her screen):</p>
+              <ol className="k-under">
+                {round.cards.map((c) => (
+                  <li key={c.id}>
+                    <span className="k-face">{c.face.icon || c.face.text}</span> {planById[c.planId]?.name}
+                  </li>
+                ))}
+              </ol>
+              <div className="k-row gap">
+                <button className="k-btn" disabled={busy} onClick={() => act({ type: "reshuffle" }, "Reshuffled ✓")}>RESHUFFLE</button>
+                <button className="k-btn" onClick={() => setSheet({ type: "category", mode: "reshuffle" })}>CHANGE CATEGORY</button>
+              </div>
+            </section>
+          )}
+
+          {/* ── Round: she picked ── */}
+          {state.stage === "round" && round && pick && plan && (
+            <section className={`k-card k-picked ${justPicked ? "is-new" : ""}`}>
+              <p className="k-kicker">Jess picked a card</p>
+              <p className="k-label">Category</p>
+              <p className="k-title">{catLabel(round.category)} · “{categories[round.category]?.label}”</p>
+              <p className="k-label">Plan</p>
+              <p className="k-big">{plan.icon} {plan.name}</p>
+              {round.swappedPlanId && <span className="k-tag">swapped by you</span>}
+              <dl className="k-facts">
+                <dt>Place</dt>
+                <dd>{plan.place}</dd>
+                <dt>Address</dt>
+                <dd>{plan.address || "—"}</dd>
+                <dt>Travel</dt>
+                <dd>{plan.travel || "check Maps"}</dd>
+                <dt>Duration</dt>
+                <dd>~{plan.duration} min</dd>
+                <dt>Cost</dt>
+                <dd>{plan.cost}</dd>
+                {plan.closesAt && (
+                  <>
+                    <dt>Closes</dt>
+                    <dd>{plan.closesAt} (verify)</dd>
+                  </>
+                )}
+                <dt>She sees</dt>
+                <dd>{round.revealedFull ? "full" : round.swappedPlanId ? "\"plot twist 😭\"" : plan.revealMode}</dd>
+              </dl>
+              {plan.hostNotes && <p className="k-note">What to do: {plan.hostNotes}</p>}
+              {lastReaction?.roundId === round.id && <p className="k-reaction">Jess tapped "{lastReaction.text}"</p>}
+              <div className="k-col">
+                {plan.mapsLink && (
+                  <a className="k-btn k-primary k-linkbtn" href={plan.mapsLink} target="_blank" rel="noreferrer">OPEN DIRECTIONS</a>
+                )}
+                {(plan.revealMode !== "full" || round.swappedPlanId) && (
+                  <button className={`k-btn ${round.revealedFull ? "k-on" : ""}`} disabled={busy} onClick={() => act({ type: "revealFull", hide: round.revealedFull }, round.revealedFull ? "Back to secret" : "Revealed on her phone ✨")}>
+                    {round.revealedFull ? "HIDE FULL REVEAL" : "REVEAL FULL PLAN TO JESS"}
+                  </button>
+                )}
+                <button className="k-btn" onClick={() => setSheet({ type: "planPicker", startCategory: round.category })}>
+                  CHANGE PLAN{plan.backup && planById[plan.backup] ? ` (backup: ${planById[plan.backup].name})` : ""}
+                </button>
+              </div>
+              {round.cards.length > 1 && (
+                <p className="k-muted small">
+                  She passed on:{" "}
+                  {round.cards
+                    .filter((c) => c.id !== pick.cardId)
+                    .map((c) => planById[c.planId]?.name)
+                    .join(", ")}
+                </p>
+              )}
+              <p className="k-muted">
+                Next possible category: <strong className="k-pink">{catLabel(nextPreview)}</strong>
+              </p>
+              <button className="k-btn k-primary k-advance" disabled={busy} onClick={() => window.confirm("Done with this one? It goes in her scrapbook.") && act({ type: "finishRound" }, "Added to her scrapbook 🎟️")}>
+                WE FINISHED THIS ✓
+              </button>
+            </section>
+          )}
 
           <div className="k-grid">
-            <button
-              className={`k-btn ${revealed ? "k-on" : ""}`}
-              disabled={busy || !cur?.destination}
-              onClick={() => act({ type: "reveal", hide: revealed }, revealed ? "Hidden again" : "Revealed on her phone ✨")}
-            >
-              {revealed ? "HIDE DESTINATION" : "REVEAL DESTINATION"}
-            </button>
             <button className="k-btn" onClick={() => setSheet({ type: "clue" })}>SEND A CLUE</button>
             <button className="k-btn" onClick={() => setSheet({ type: "message" })}>SEND MESSAGE</button>
-            <button className="k-btn" onClick={() => setSheet({ type: "backup" })}>CHANGE PLAN</button>
             <button className={`k-btn ${state.paused ? "k-on" : ""}`} disabled={busy} onClick={() => act({ type: "pause", paused: !state.paused }, state.paused ? "Resumed" : "Paused")}>
               {state.paused ? "RESUME" : "PAUSE"}
             </button>
-            <button className="k-btn k-danger" disabled={busy} onClick={() => window.confirm("Finish the night now? She'll see the ending.") && act({ type: "finish" }, "Night finished 🩷")}>
+            <button className="k-btn k-danger" disabled={busy} onClick={() => window.confirm("Finish the night now? She'll see the ending + her scrapbook.") && act({ type: "finish" }, "Night finished 🩷")}>
               FINISH NIGHT
             </button>
           </div>
-
-          {next && (
-            <section className="k-card">
-              <p className="k-label">Next planned</p>
-              <p className="k-title">{next.title}</p>
-              {next.destination && <Destination d={next.destination} compact />}
-              <p className="k-muted">~{next.estimatedMinutes || "?"} min{next.hostNotes ? ` · ${next.hostNotes}` : ""}</p>
-            </section>
-          )}
 
           {state.message && (
             <p className="k-muted small">
@@ -257,17 +371,36 @@ function ControlRoom({ pin, onLock }) {
           <p className="k-muted">
             {fmtTime(state.startedAt)} → {fmtTime(state.finishedAt)} · {mins(state.finishedAt - state.startedAt)}
           </p>
-          <p className="k-muted">Jess is looking at her scrapbook.</p>
+          <ol className="k-under">
+            {state.rounds.map((r) => (
+              <li key={r.id}>
+                {fmtTime(r.pick?.at)} · {planById[r.planId]?.name}
+              </li>
+            ))}
+          </ol>
         </section>
       )}
 
-      <PlanList
+      {state.rounds.length > 0 && state.status === "started" && (
+        <details className="k-card">
+          <summary className="k-summary">Done so far ({state.rounds.length})</summary>
+          <ol className="k-under">
+            {state.rounds.map((r) => (
+              <li key={r.id}>
+                {fmtTime(r.pick?.at)} · {catLabel(r.category)} · {planById[r.planId]?.name}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+
+      <Library
         state={state}
+        categories={categories}
         busy={busy}
-        onSetSteps={(steps2, msg) => act({ type: "setSteps", steps: steps2 }, msg)}
-        onGoto={(id) => window.confirm("Jump straight to this step?") && act({ type: "goto", stepId: id }, "Jumped ✓")}
-        onEdit={(step) => setSheet({ type: "edit", step })}
-        onAdd={() => setSheet({ type: "edit", step: null })}
+        onToggle={(p) => act({ type: "savePlan", plan: { ...p, enabled: p.enabled === false } }, p.enabled === false ? "Turned on" : "Turned off")}
+        onEdit={(p) => setSheet({ type: "edit", plan: p })}
+        onAdd={() => setSheet({ type: "edit", plan: null })}
       />
 
       <Feed requests={requests} reactions={reactions} />
@@ -275,54 +408,46 @@ function ControlRoom({ pin, onLock }) {
       {flash && <div className="k-flash">{flash}</div>}
 
       {sheet?.type === "message" && (
-        <TextSheet
-          title="Send Jess a message"
-          note="Pops up full-screen on her phone."
-          presets={MESSAGE_PRESETS}
-          onClose={() => setSheet(null)}
-          onSend={async (text) => (await act({ type: "message", text }, "Sent to her phone ✓")) && setSheet(null)}
-        />
+        <TextSheet title="Send Jess a message" note="Pops up full-screen on her phone." presets={MESSAGE_PRESETS} onClose={() => setSheet(null)} onSend={async (text) => (await act({ type: "message", text }, "Sent to her phone ✓")) && setSheet(null)} />
       )}
       {sheet?.type === "clue" && (
-        <TextSheet
-          title="Send a clue"
-          note="Shows up as a little sticky note on her current chapter."
-          presets={CLUE_PRESETS}
-          onClose={() => setSheet(null)}
-          onSend={async (text) => (await act({ type: "clue", text }, "Clue sent ✓")) && setSheet(null)}
-        />
+        <TextSheet title="Send a clue" note="Shows up as a little sticky note on her screen." presets={CLUE_PRESETS} onClose={() => setSheet(null)} onSend={async (text) => (await act({ type: "clue", text }, "Clue sent ✓")) && setSheet(null)} />
       )}
-      {sheet?.type === "backup" && (
-        <BackupSheet
-          state={state}
-          categories={sheet.categories}
-          hasCurrent={!!cur}
+      {sheet?.type === "category" && (
+        <CategorySheet
+          options={categoryOptions}
+          title={sheet.mode === "reshuffle" ? "Deal a different category" : "Choose category"}
           onClose={() => setSheet(null)}
-          onUse={async (backupId, mode) =>
-            (await act({ type: "useBackup", backupId, mode, requestId: sheet.requestId }, mode === "replace" ? "Destination swapped ✓" : "Added as the next stop ✓")) && setSheet(null)
+          onPick={async (category) =>
+            (await act({ type: sheet.mode === "reshuffle" ? "reshuffle" : "deal", category }, "Cards dealt to her phone 🃏")) && (setSheet(null), setWaitPrompt(false))
           }
         />
       )}
-      {sheet?.type === "edit" && (
-        <EditStepSheet
-          step={sheet.step}
+      {sheet?.type === "planPicker" && (
+        <PlanPickerSheet
+          state={state}
+          categories={categories}
+          startCategory={sheet.startCategory}
+          suggested={sheet.suggested}
+          actionLabel={pick ? "Swap to this" : "Deal this category"}
           onClose={() => setSheet(null)}
-          onSave={async (step) => {
-            const exists = steps.some((s) => s.id === step.id);
-            const list = exists ? steps.map((s) => (s.id === step.id ? step : s)) : [...steps, step];
-            if ((await act({ type: "setSteps", steps: list }, "Saved ✓")) !== false) setSheet(null);
+          onPick={async (planId) => {
+            const ok = pick
+              ? await act({ type: "swapPlan", planId, requestId: sheet.requestId }, "Plan swapped ✓ (still secret)")
+              : await act({ type: "deal", category: planById[planId].category }, "Cards dealt 🃏");
+            if (ok) setSheet(null);
           }}
         />
+      )}
+      {sheet?.type === "edit" && (
+        <EditPlanSheet plan={sheet.plan} categories={categories} onClose={() => setSheet(null)} onSave={async (p) => (await act({ type: "savePlan", plan: p }, "Saved ✓")) && setSheet(null)} />
       )}
       {sheet?.type === "menu" && (
         <div className="k-sheet-backdrop" onClick={() => setSheet(null)}>
           <div className="k-sheet" onClick={(e) => e.stopPropagation()}>
             <p className="k-title">Settings</p>
             <JessLink />
-            <button
-              className="k-btn k-danger wide"
-              onClick={() => window.confirm("Reset EVERYTHING back to waiting? Her scrapbook and your plan edits are wiped.") && act({ type: "reset" }, "Reset ✓").then(() => setSheet(null))}
-            >
+            <button className="k-btn k-danger wide" onClick={() => window.confirm("Reset EVERYTHING back to waiting? Her scrapbook and your edits are wiped.") && act({ type: "reset" }, "Reset ✓").then(() => setSheet(null))}>
               Reset night
             </button>
             <button className="k-btn wide" onClick={onLock}>Lock Control Room</button>
@@ -334,32 +459,11 @@ function ControlRoom({ pin, onLock }) {
   );
 }
 
-function Destination({ d, compact }) {
-  return (
-    <div className="k-dest">
-      <p className="k-dest-name">📍 {d.name}</p>
-      {!compact && (
-        <>
-          {d.address && <p className="k-muted">{d.address}</p>}
-          <p className="k-muted">
-            {[d.openUntil && `open until ${d.openUntil}`, d.costLevel].filter(Boolean).join(" · ")}
-          </p>
-          {d.mapsLink && (
-            <a className="k-link" href={d.mapsLink} target="_blank" rel="noreferrer">
-              Open in Maps →
-            </a>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-function RequestCard({ request, byId, busy, onUse, onChoose, onIgnore }) {
-  const [pick, setPick] = useState(0);
-  const options = request.suggestions.map((id) => byId[id]).filter(Boolean);
-  const suggested = options[pick];
-  const others = options.filter((_, i) => i !== pick).slice(0, 3);
+function RequestCard({ request, planById, busy, onUse, onChoose, onIgnore }) {
+  const [i, setI] = useState(0);
+  const options = request.suggestions.map((id) => planById[id]).filter(Boolean);
+  const suggested = options[i];
+  const others = options.filter((_, j) => j !== i).slice(0, 3);
   const surprise = request.mood === "surprise";
   return (
     <section className="k-card k-request">
@@ -369,36 +473,31 @@ function RequestCard({ request, byId, busy, onUse, onChoose, onIgnore }) {
       ) : (
         <>
           <p className="k-label">Jess requested</p>
-          <p className="k-big">
-            {request.emoji} {request.label}
-          </p>
+          <p className="k-big">{request.emoji} {request.label}</p>
         </>
       )}
       {suggested && (
         <div className="k-suggest">
           <p className="k-label">{surprise ? "Recommended next" : "Suggested switch"}</p>
-          <p className="k-title">{suggested.name}</p>
+          <p className="k-title">{suggested.icon} {suggested.name}</p>
           <p className="k-muted">
-            {suggested.description} · ~{suggested.estimatedDuration} min · {suggested.costLevel} · open until {suggested.openUntil}
+            {suggested.place} · ~{suggested.duration} min · {suggested.cost}
+            {suggested.closesAt ? ` · closes ${suggested.closesAt}` : ""}
           </p>
-          {suggested.reasonJessMightLikeIt && <p className="k-note">Why: {suggested.reasonJessMightLikeIt}</p>}
+          {suggested.hostNotes && <p className="k-note">{suggested.hostNotes}</p>}
         </div>
       )}
       {others.length > 0 && (
         <div className="k-chips">
           <span className="k-label">Other backups</span>
           {others.map((b) => (
-            <button key={b.id} className="k-chip" onClick={() => setPick(options.indexOf(b))}>
-              {b.name}
-            </button>
+            <button key={b.id} className="k-chip" onClick={() => setI(options.indexOf(b))}>{b.name}</button>
           ))}
         </div>
       )}
       <div className="k-col">
         {suggested && (
-          <button className="k-btn k-primary" disabled={busy} onClick={() => onUse(suggested.id)}>
-            USE THIS PLAN
-          </button>
+          <button className="k-btn k-primary" disabled={busy} onClick={() => onUse(suggested.id)}>USE THIS PLAN</button>
         )}
         <button className="k-btn" onClick={onChoose}>CHOOSE ANOTHER</button>
         <button className="k-btn k-ghost" disabled={busy} onClick={onIgnore}>IGNORE / KEEP CURRENT PLAN</button>
