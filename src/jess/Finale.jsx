@@ -9,12 +9,11 @@ export default function Finale({ finale, scrapbook }) {
           <span key={i} style={{ "--a": `${i * 30}deg`, "--d": `${(i % 4) * 0.05}s` }} />
         ))}
       </div>
-      <p className="eyebrow rise" style={{ "--d": "0.1s" }}>the end</p>
       <h1 className="display display-sm rise" style={{ "--d": "0.3s" }}>{finale.title}</h1>
 
       {scrapbook.length > 0 && (
         <div className="rise finale-tickets" style={{ "--d": "0.8s" }}>
-          <p className="eyebrow">tonight, according to the receipts</p>
+          <p className="eyebrow">tonight</p>
           <Tickets items={scrapbook} />
         </div>
       )}

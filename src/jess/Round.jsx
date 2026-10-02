@@ -129,7 +129,7 @@ export default function Round({ round, clues, me, nightId, onPick, onReact, onNo
           <Clues clues={clues} />
           <div className="step-actions rise" style={{ "--d": "0.3s" }}>
             {tapped ? (
-              <p className="sent hand">sent ✓ {me} knows 🩷</p>
+              <p className="sent hand">got it ✓</p>
             ) : (
               <button
                 className="btn btn-primary wide"

@@ -5,7 +5,7 @@ import { CategorySheet, EditPlanSheet, PlanPickerSheet, TextSheet } from "./Shee
 import Library from "./Library.jsx";
 import "./kyd.css";
 
-const MESSAGE_PRESETS = ["Time to go.", "Look at Kyd.", "One more stop.", "Check the car.", "Trust me.", "Don't open that yet.", "Okay you can look now."];
+const MESSAGE_PRESETS = ["Time to go.", "Look at me 👀", "One more stop.", "Check the car.", "Trust me.", "Don't open that yet.", "Okay you can look now."];
 const CLUE_PRESETS = ["it's close.", "you've never been here.", "it involves food.", "bring a jacket.", "you're gonna like this one.", "be so fr, you'll never guess 😭"];
 
 function useNow(ms = 15000) {

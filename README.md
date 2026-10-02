@@ -10,9 +10,9 @@ A surprise date night that plays like a little card game, which you secretly run
 
 ## How a night plays
 
-1. **Waiting.** Her page says *"Tonight, Jess. Your night isn't ready yet."* Nothing is scheduled.
+1. **Waiting.** Her page says *"Hey Jess. not yet 👀"* Nothing is scheduled.
 2. **You tap JESS IS HERE 🩷** when she actually arrives. The real start time is recorded and her phone moves into the night with no refresh.
-3. **Opening:** *"Tonight belongs to Jess."* → *"Rule #1: Don't ask Kyd where you're going."* → *"Come inside."* → *"Okay. Put the phone down."* (flowers + basket). You tap **NEXT** through these.
+3. **Opening:** *"Hey Jess. you don't have to plan anything tonight."* → *"rule #1: don't ask where we're going."* → *"come inside 👀"* → *"put your phone down for a sec"* (flowers + basket). You tap **NEXT** through these.
 4. **Card rounds:**
    - **The server picks a category** for the next part of the night ("food. obviously.", "something fun", "little adventure"…).
    - **She sees 2–4 face-down cards**, usually 3. Each one hides a *different* real plan from that category. The card faces (🐦 ✦ "pick me" "don't pick me" 👀…) are random every round and never hint at what's underneath.
@@ -27,7 +27,7 @@ A surprise date night that plays like a little card game, which you secretly run
 |---|---|---|
 | `full` | exactly what it is | "Braum's run 🍦" |
 | `hint` | the type of thing | "we're getting something sweet 👀" |
-| `secret` | nothing | "Kyd knows where we're going. get up." |
+| `secret` | nothing | "you'll see 👀" |
 
 You can always upgrade a reveal with **REVEAL FULL PLAN TO JESS**.
 
@@ -55,7 +55,7 @@ All reaction GIFs live in **`src/data/reactionLibrary.js`**. Components never ha
 | Context | When | Draws from | Caption |
 |---|---|---|---|
 | `pick` | ~30% of card picks, before the flip | SIDE_EYE, JUDGING, SHOCKED, AWKWARD, CRYING_LAUGHING, NO_WAY, CAT_CHAOS | "now why would you pick that one 😭", "noted 📝", "be so fr 😭"… |
-| `surprise` | she taps *Just surprise me* | CELEBRATING, LETS_GO | "I KNOW THAT'S RIGHT" → "Kyd got it from here." |
+| `surprise` | she taps *Just surprise me* | CELEBRATING, LETS_GO | "I KNOW THAT'S RIGHT" → "I got you." |
 | `switch` | she asks to change the vibe | SIDE_EYE, JUDGING, CAT_CHAOS | "oh so NOW you wanna switch 😭" |
 | `swapped` | you swap her plan | AWKWARD, CRYING_LAUGHING | "my fault gang 😭" |
 | `easterEgg` | she taps the waiting-screen bird 5× | CAT_CHAOS | "clock it." |
@@ -69,7 +69,7 @@ All reaction GIFs live in **`src/data/reactionLibrary.js`**. Components never ha
 
 ## Editing
 - **Everything about the night is in `data/plan.js`:** opening beats, categories and their labels, the **card library** (31 Tulsa plans), reveal lines, the occasional sweet and flirty asides, captions, card faces, the finale note.
-- **Tone** is mostly playful, sometimes sweet, rarely flirty. No pet names or relationship labels. Sweet lines show on ~18% of reveals and flirty ones on ~10% (`pickAside` in `netlify/lib/engine.js`).
+- **Tone:** everything Jess sees is written as you talking: short and simple, no explaining (you'll explain in person). Mostly playful, sometimes sweet, rarely flirty. No pet names or relationship labels. Sweet lines show on ~18% of reveals and flirty ones on ~10% (`pickAside` in `netlify/lib/engine.js`).
 - **Reaction GIFs** live in `src/data/reactionLibrary.js`.
 - **During the night:** use **Card library** in the Control Room. Toggle any plan on/off (closed, not in the mood), edit it, or add a new one. Edits live with the current night.
 - **⋯ → Reset night** reloads `data/plan.js` and wipes the current night.

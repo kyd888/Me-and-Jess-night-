@@ -375,12 +375,12 @@ function skyPhase(state) {
 /** How a flipped card reads on Jess's phone, by revealMode. */
 function jessReveal(state, round, plan) {
   if (round.swappedPlanId && !round.revealedFull) {
-    return { mode: "swapped", text: "plot twist 😭", sub: `plan changed. ${settings.me}'s on it.` };
+    return { mode: "swapped", text: "change of plans 😭", sub: "" };
   }
   const mode = round.revealedFull ? "full" : plan.revealMode || "hint";
-  if (mode === "full") return { mode, text: plan.jessFull || plan.name, sub: `${settings.me} has the directions.` };
-  if (mode === "secret") return { mode, text: `${settings.me} knows where we're going.`, sub: "get up." };
-  return { mode: "hint", text: plan.jessHint || `something ${categories[round.category]?.label}…`, sub: `${settings.me} has the directions.` };
+  if (mode === "full") return { mode, text: plan.jessFull || plan.name, sub: "" };
+  if (mode === "secret") return { mode, text: "you'll see 👀", sub: "" };
+  return { mode: "hint", text: plan.jessHint || categories[round.category]?.label, sub: "" };
 }
 
 /** Exactly what Jess's phone may know. Never the plans under the cards. */

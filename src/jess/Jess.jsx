@@ -47,7 +47,7 @@ export default function Jess() {
     if (!data) return;
     const p = prev.current;
     if (p && p.status === data.status) {
-      if (data.scrapbook.length > p.scrapbook.length) showToast("+1 card in your scrapbook 🎟️");
+      if (data.scrapbook.length > p.scrapbook.length) showToast("+1 card 🎟️");
       else if (data.clues.length > p.clues.length) showToast("new clue 👀");
     }
     if (data.message && data.message.id !== p?.message?.id && data.message.id !== seenMsg) navigator.vibrate?.(60);
@@ -73,7 +73,7 @@ export default function Jess() {
     screen = (
       <section className="center-screen">
         <Bird className="loading-bird" />
-        {error && <p className="tiny center-text">can't reach {me}'s server… trying again</p>}
+        {error && <p className="tiny center-text">one sec…</p>}
       </section>
     );
   } else if (data.status === "waiting") {

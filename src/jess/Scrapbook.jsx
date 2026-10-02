@@ -28,8 +28,8 @@ export default function Scrapbook({ items, onClose }) {
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet sheet-tall" onClick={(e) => e.stopPropagation()}>
-        <p className="sheet-title">your night so far</p>
-        {items.length ? <Tickets items={items} /> : <p className="tiny">nothing yet. give it a minute.</p>}
+        <p className="sheet-title">tonight so far</p>
+        {items.length ? <Tickets items={items} /> : <p className="tiny">nothing yet 👀</p>}
         <button className="btn btn-ghost" onClick={onClose}>close</button>
       </div>
     </div>

@@ -24,7 +24,7 @@ export default function Beat({ beat, clues, me, nightId, onReact }) {
       <div className="step-actions rise" style={{ "--d": "1s" }}>
         {beat.button &&
           (tapped ? (
-            <p className="sent hand">sent ✓ {me} knows 🩷</p>
+            <p className="sent hand">got it ✓</p>
           ) : (
             <button className="btn btn-primary wide" onClick={tap}>{beat.button}</button>
           ))}

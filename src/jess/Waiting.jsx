@@ -27,13 +27,10 @@ export default function Waiting({ me }) {
       {/* Hidden detail: bother the bird 5 times. */}
       {egg && <Reaction reaction={egg} className="easter-cat pop-in" />}
       <h1 className="display rise" style={{ "--d": "0.2s" }}>
-        Tonight, Jess.
+        Hey Jess.
       </h1>
       <p className="lede rise" style={{ "--d": "0.6s" }}>
-        Your night isn't ready yet.
-      </p>
-      <p className="tiny rise" style={{ "--d": "1s" }}>
-        {me} will start this when you're actually here.
+        not yet 👀
       </p>
     </section>
   );

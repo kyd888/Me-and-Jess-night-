@@ -39,7 +39,7 @@ export default function RequestSheet({ me, onSend, onClose }) {
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         {phase === "pick" && (
           <>
-            <p className="sheet-title">What sounds better?</p>
+            <p className="sheet-title">what sounds better?</p>
             <div className="mood-grid">
               {OPTIONS.map(([id, emoji, label]) => (
                 <button key={id} className={`mood ${id === "surprise" ? "mood-wide" : ""}`} onClick={() => pick(id)}>
@@ -56,8 +56,7 @@ export default function RequestSheet({ me, onSend, onClose }) {
         {phase === "sent" && <Reaction reaction={reaction} className="reaction-sheet pop-in" />}
         {phase === "done" && (
           <>
-            {!surprise && <p className="sheet-big rise">Request sent to {me} 👀</p>}
-            <p className="sheet-big hand rise">{surprise ? `${me} got it from here.` : "okay, you're off planning duty again."}</p>
+            <p className="sheet-big hand rise">{surprise ? "I got you." : "got it 👀"}</p>
           </>
         )}
       </div>
