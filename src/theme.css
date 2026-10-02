@@ -1,39 +1,40 @@
 /* ─────────────────────────────────────────────
-   THEME: change colors & fonts here.
+   THEME: Jess's colors & fonts. Pink is the signature.
    ───────────────────────────────────────────── */
 :root {
-  /* Night palette */
-  --ink: #2b2340;          /* main text on paper */
-  --ink-soft: #6d6286;     /* secondary text on paper */
-  --paper: #fffaf1;        /* cards / tickets */
-  --paper-2: #f6ead8;      /* ticket stubs, edges */
-  --cream: #fdf2e4;        /* text on the sky */
-  --cream-soft: rgba(253, 242, 228, 0.72);
+  --ink: #3a1f33;          /* text on cream cards */
+  --ink-soft: #7d5470;
+  --paper: #fff7f2;        /* warm cream cards */
+  --paper-2: #fbe7e4;      /* stubs, edges */
+  --cream: #fff6f1;        /* text on the sky */
+  --cream-soft: rgba(255, 246, 241, 0.8);
 
-  --peach: #f2b38f;
-  --rose: #e98a9a;
-  --gold: #f6c96b;
-  --plum: #3b2d5e;
-  --night: #1b1634;
+  --blush: #fbd3dc;
+  --rose: #e0708f;
+  --dusty: #c98b9f;
+  --berry: #a2335f;
+  --gold: #ffd59e;
+  --night: #2a1530;
 
   /* Buttons */
-  --btn: #f6c96b;
-  --btn-edge: #c98f3d;
-  --btn-ink: #3a2a1c;
+  --btn-top: #ffe1ea;
+  --btn: #f7a8c0;
+  --btn-edge: #c9618a;
+  --btn-ink: #4a1530;
 
   /* Fonts */
   --font-display: "Fraunces", Georgia, serif;
   --font-hand: "Caveat", "Bradley Hand", cursive;
   --font-body: "Nunito", -apple-system, system-ui, sans-serif;
 
-  /* Shape */
   --radius: 22px;
-  --shadow: 0 18px 40px -18px rgba(15, 8, 40, 0.65);
+  --shadow: 0 18px 40px -18px rgba(60, 10, 40, 0.55);
 }
 
-/* Sky phases: the night gets darker each chapter. */
-.sky-0 { background: linear-gradient(180deg, #4b3a6e 0%, #a46a86 42%, #f0a987 74%, #f8d3a4 100%); }
-.sky-1 { background: linear-gradient(180deg, #3a2d60 0%, #85567f 45%, #e39882 80%, #f2c29b 100%); }
-.sky-2 { background: linear-gradient(180deg, #2a2150 0%, #5e4378 48%, #b07090 82%, #e2a08e 100%); }
-.sky-3 { background: linear-gradient(180deg, #1c1740 0%, #362a5e 50%, #6a4a7c 85%, #a06a86 100%); }
-.sky-4 { background: linear-gradient(180deg, #120f2b 0%, #221b45 55%, #3d2d5e 88%, #5d4073 100%); }
+/* Sky phases move with the CHAPTERS, not the clock:
+   0 light sunset pink → 2 dusty rose evening → 4 deep pink/purple night. */
+.sky-0 { background: linear-gradient(180deg, #a85285 0%, #dc7d9f 38%, #f3aab0 70%, #fdd9c8 100%); }
+.sky-1 { background: linear-gradient(180deg, #8f4279 0%, #c86a92 42%, #eb9aa6 76%, #f8c8bd 100%); }
+.sky-2 { background: linear-gradient(180deg, #6b3466 0%, #a3577f 46%, #cf8399 80%, #e8aab0 100%); }
+.sky-3 { background: linear-gradient(180deg, #45244f 0%, #72386a 50%, #a5527e 84%, #c87a96 100%); }
+.sky-4 { background: linear-gradient(180deg, #24132f 0%, #41204b 55%, #6c2e61 86%, #94466f 100%); }

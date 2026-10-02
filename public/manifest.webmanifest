@@ -1,7 +1,6 @@
 {
   "name": "Tonight",
   "short_name": "Tonight",
-  "start_url": "/",
   "display": "standalone",
   "background_color": "#2a2148",
   "theme_color": "#2a2148",

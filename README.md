@@ -1,134 +1,106 @@
-# Tonight belongs to Jess 🐦
+# Tonight belongs to Jess 🐦🩷
 
-A small, mobile-first "choose your night" web app for a Tulsa date night. Jess picks mystery ticket cards, each one flips to reveal the next stop, and the night ends with a small surprise.
+A surprise date night with two phones:
 
-Built with React + Vite. No backend. Deploys to Netlify. Progress is saved in `localStorage`, so refreshing the page doesn't reset the night.
+| | Link | Who |
+|---|---|---|
+| **Jess Mode** | `https://<your-site>.netlify.app/jess` | Jess. A pink storybook that only shows what she needs to know right now. |
+| **Kyd Control Room** | `https://<your-site>.netlify.app/kyd` | You, with a PIN. The whole plan, backups, her requests, and every control. |
 
-## Run it
+Jess never picks destinations. You run the night from your phone, and her page updates by itself within a few seconds.
 
+## How it works
+
+```
+ Jess's phone  ──GET /api/state every 2.5s──▶  Netlify Function ──▶ Netlify Blobs
+ (/jess)       ──POST requests & taps──────▶   (guest view only)     state-tonight
+                                                                     jess-tonight
+ Kyd's phone   ──GET/POST /api/host + PIN──▶  Netlify Function ──▶
+ (/kyd)
+```
+
+- **Shared state** lives in Netlify Blobs: one record you write and one record Jess writes, so the two never overwrite each other.
+- **Jess's phone only ever gets a guest view.** That means the current chapter's wording, your clues and messages, a destination only *after* you reveal it, and stops already finished. She never gets future steps, your notes, addresses or the backup list.
+- **The plan stays off her phone.** It lives in `data/plan.js`, which only the server reads. It isn't in the website's code, so she can't spoil it by looking at the page source.
+- **Updates come by polling** every 2.5 seconds, and immediately when she unlocks her phone or switches back to the tab.
+
+### The night starts when she arrives
+Nothing is scheduled. Until you tap **JESS IS HERE 🩷**, her page says *"Tonight, Jess. Your night isn't ready yet."*
+
+Tapping it:
+- records the real start time
+- starts chapter 1
+- moves her phone into the night automatically, with no refresh
+
+After that, the only timing is what *you* trigger: advance, reveal, clue, message, pause, finish. Elapsed time and estimated durations show only in the Control Room.
+
+## Jess's side
+1. **Waiting:** "Tonight, Jess." (tap the bird).
+2. **Start:** "Tonight belongs to Jess." → *okay I'm ready* → "Rule #1: Don't ask Kyd where you're going." → *fine 🙄*
+3. **One chapter at a time:** a picture, a short line, maybe a hint, and one button. Her button just tells you she tapped it; the story only moves when you advance it.
+4. **Revealing a destination:** when you tap REVEAL, a ticket flips over on her screen.
+5. **Clues** appear as sticky notes. **Messages** pop up full-screen ("Look at Kyd.").
+6. **"not feeling this?"** offers six vibes (Just surprise me, Feed me, Something fun, Something chill, Something sweet, Can we just be cozy?). She never sees places. She gets *"Request sent to Kyd 👀"* → *"Okay, you're off planning duty again."*, or for surprise mode *"Correct answer."* → *"Kyd has it from here."*
+7. **Scrapbook:** every finished step becomes a ticket with the real time it happened. The little bird trail at the top opens it.
+8. **Finale:** "That's the night." with every ticket and your note.
+
+## Your side (Control Room)
+- **Before she arrives:** status, the giant **JESS IS HERE 🩷** button, the first thing she'll see, and her link with a QR code.
+- **During the night:**
+  - started time, elapsed time, and time on this step (vs. estimate)
+  - current step: destination, address, maps link, open until, your notes, and whether she tapped her button
+  - **ADVANCE STORY · REVEAL DESTINATION · SEND A CLUE · SEND MESSAGE · CHANGE PLAN · PAUSE · FINISH NIGHT**
+  - the next planned step
+- **Requests from Jess:**
+  - pop up at the top with a suggested backup and why she might like it, plus other options
+  - **USE THIS PLAN** adds it as the next step. Nothing is revealed until you tap REVEAL.
+  - **CHOOSE ANOTHER** or **IGNORE / KEEP CURRENT PLAN**
+- **Tonight's plan:**
+  - reorder with ↑ ↓
+  - tap a step to edit it
+  - ✕ to remove a step
+  - **go** to jump straight to a step (skipping the ones in between)
+  - **+ Add a step**
+- **Change plan:** the private Tulsa backup bank by category (DINNER, DESSERT, GAMES, COZY, COFFEE, RANDOM, AT HOME). Each backup can be made the next step or replace the current destination.
+- **⋯ menu:** Jess's link + QR code, **Reset night**, lock.
+
+## Editing the plan
+- **Default steps, backups, finale text and wording:** `data/plan.js`. Every field is documented at the top of that file.
+- **During the night:** change things in the Control Room. Your changes are stored with the live night.
+- **To reload `data/plan.js` after editing it:** use ⋯ → **Reset night**. This wipes the current night.
+- **Colors and fonts:** `src/theme.css`. Pink is the signature color.
+- **Layout and animation:** `src/styles.css` (Jess) and `src/kyd/kyd.css` (Control Room).
+
+⚠️ Addresses and hours marked "verify" are best guesses. Check them on the day.
+
+## Setup on Netlify (one time)
+1. **Set your PIN:** Netlify → your site → **Site configuration → Environment variables** → add `HOST_PIN` (e.g. a 4–6 digit number). Without it, the PIN falls back to `fallbackPin` in `data/plan.js` (`0630`). Change one or the other.
+2. **Deploy:** push to the branch Netlify builds from. `netlify.toml` already sets up the build, the functions folder, and the `/jess` and `/kyd` routes. **Netlify Blobs needs no setup.**
+3. **Do a test run:** open `/kyd?s=test` and `/jess?s=test` on two phones. The `?s=test` part uses a separate practice night, so the real one stays untouched.
+4. **Add the Control Room to your Home Screen:** on your iPhone, open `/kyd` in Safari → Share → **Add to Home Screen**.
+5. **Send Jess her link:** text her `/jess`, or let her scan the QR code in the Control Room.
+
+## Run locally
 ```bash
 npm install
-npm run dev        # opens on http://localhost:5173 (and your LAN IP for testing on an iPhone)
-npm run build      # production build → dist/
-npm run preview    # serve the production build locally
+npm run dev     # http://localhost:5173/jess  and  http://localhost:5173/kyd  (PIN 0630)
 ```
-
-To test on your iPhone, run `npm run dev`, then open the `Network:` URL it prints, with the phone on the same Wi-Fi.
-
-## The flow
-
-| | Prompt | Cards → reveal |
-|---|---|---|
-| Intro | Tonight belongs to Jess | Start the night |
-| Ch 1 | Where are we starting? | Something Cozy → **Lanna Thai** · Something Tasty → **Velvet Taco** · Trust Me → **Mother Road Market** |
-| Ch 2 | Choose our vibe. | Play → **Max Retropub** · Explore → **Magic City Books + Center of the Universe** · Chill → **Circle Cinema** |
-| Ch 3 | Sweet ending. | Cold → **Braum's** · Chocolate → **QT candy run** · Dealer's Choice → **ice cream sandwiches + Oculus at home** |
-| Ch 4 | One last thing… | gift box → "I got you something." → flowers + basket, a note, and stubs from her picks that night |
-
-The sky gets darker each chapter, and more stars come out as the night goes on.
-
-> ⚠️ Check evening hours for each place on the day. If something's closed, hide that card in Host Mode.
-
-## Changing the date options
-
-**Everything is in `src/data/night.js`.** Every card, reveal, note, quip and line of finale text lives there. The UI only reads that file. Each choice looks like:
-
-```js
-{
-  id: "cozy",
-  title: "Something Cozy",          // what Jess sees on the ticket
-  hint: "noodles. a booth. no rush.",
-  icon: "🍜",
-  revealTitle: "Lanna Thai",
-  location: "Lanna Thai · Tulsa",
-  description: "…",
-  note: "Pad Thai. Obviously.",     // handwritten sticky note
-  mapLink: maps("Lanna Thai Tulsa OK"),
-  enabled: true,                    // false hides the card
-}
-```
-
-There's a list of backup Tulsa ideas at the bottom of that file.
-
-Set `signature` near the top of the file to sign the final note (it's `— me` right now).
-
-**If you edit `night.js` after using Host Mode on the phone**, bump `version` in that file. Otherwise the phone keeps its saved Host Mode edits and won't pick up your changes.
-
-## Changing colors / text / fonts
-
-- **Colors, fonts and the sky gradients:** `src/theme.css`
-- **All wording:** `src/data/night.js` (intro, chapter titles, quips, finale, the hidden bird and moon lines)
-- **Layout and animation:** `src/styles.css`
-
-## Host Mode (hidden)
-
-Open it either way:
-- **Long-press the top-right corner of the screen for about 1 second**, or
-- add `?host` to the URL (e.g. `https://your-site.netlify.app/?host`)
-
-In Host Mode you can:
-- skip ahead, or jump to any chapter or the finale
-- reset the night (keeps your edits)
-- edit any card's text, location, note and map link
-- hide or show a card (e.g. if a place is closed)
-- edit the finale text, basket items and signature
-- show Jess's QR code (it carries your edits to her phone)
-- copy the plan as JSON, or restore the defaults from `night.js`
-
-Edits save on your phone and reach Jess's phone through the QR code, so if you change something, have her scan again.
-
-## Hidden details
-
-- Tap the little bird on the intro screen.
-- Triple-tap the moon on the intro screen.
-- Each pick shows one quip, and quips don't repeat within a night.
-
-## How the night works (two phones)
-
-1. **Your phone** runs the app from the Home Screen. When it's opened from the Home Screen icon, it starts on a **"Scan to start your night"** QR screen.
-2. **Jess scans the QR code** with her iPhone camera. The night opens in Safari on her phone, and she makes all the choices there.
-3. Her progress is saved on **her** phone, so she can lock it, switch apps or refresh without losing her place.
-
-Host Mode edits (a hidden card, new text) are packed into the QR link. If you change something mid-date, open Host Mode → **Show Jess's QR code** and have her scan again. Her progress is kept.
-
-Other ways to get to the QR screen: add `?qr` to the URL, or tap "or send her the link" to text it to her.
-
-## Deploy to Netlify
-
-**Option A: connect GitHub (recommended, redeploys on every push)**
-1. Go to [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import an existing project** → GitHub.
-2. Pick this repo and the branch the app is on.
-3. Build settings come from `netlify.toml` (`npm run build`, publish `dist`). Click **Deploy**.
-4. Optional: **Site configuration → Change site name**, e.g. `tonight-for-jess.netlify.app`.
-
-**Option B: drag and drop**
-```bash
-npm install && npm run build
-```
-Then drag the `dist` folder onto [app.netlify.com/drop](https://app.netlify.com/drop).
-
-**Option C: CLI**
-```bash
-npm i -g netlify-cli
-netlify deploy --build --prod
-```
-
-### Put it on your Home Screen
-On your iPhone, open the Netlify URL in **Safari** → Share → **Add to Home Screen**. Opening it from that icon shows Jess's QR code first. "Preview on this phone" lets you click through the night yourself, and long-pressing the top-right corner opens Host Mode.
-
-Before the date, go through the night once on your own phone, then use **Reset night** in Host Mode. Jess's phone starts fresh either way.
+The dev server includes a stand-in for the Netlify Functions that keeps state in memory, so both pages work locally without any Netlify tools. Restarting the dev server resets the night. To test with the real Blobs storage locally, use `netlify dev`.
 
 ## Project layout
-
 ```
+data/plan.js                 ← tonight's steps + Tulsa backups (server-only)
+netlify/
+  functions/state.mjs        ← /api/state  (Jess: guest view, requests, taps)
+  functions/host.mjs         ← /api/host   (Kyd: PIN-protected controls)
+  lib/engine.js              ← the night's logic: actions, guest view, suggestions
+  lib/api.js                 ← request handling shared by functions + dev server
+  lib/blobStore.js           ← Netlify Blobs (strong consistency)
 src/
-  data/night.js         ← the plan (edit this)
-  lib/share.js          ← QR link: packs Host Mode edits for Jess's phone
-  theme.css             ← colors & fonts
-  styles.css            ← layout & animation
-  App.jsx               ← screen flow / state
-  lib/storage.js        ← localStorage (progress + Host Mode edits)
-  components/
-    Intro.jsx  Chapter.jsx  Reveal.jsx  Finale.jsx
-    Handoff.jsx (QR screen)  Progress.jsx  Sky.jsx  Toast.jsx  HostMode.jsx  icons.jsx
+  main.jsx                   ← /kyd → Control Room, everything else → Jess
+  jess/                      ← Waiting, Onboarding, StepView, RequestSheet, Scrapbook, Finale
+  kyd/                       ← Kyd.jsx (Control Room), PlanList, Sheets, kyd.css
+  components/                ← Sky, birds/icons, Toast (shared)
+  lib/api.js                 ← fetch + polling helpers
+  theme.css  styles.css
 ```

@@ -9,15 +9,15 @@ export const BirdGlyph = ({ className = "" }) => (
 /** A round little perched bird (Jess's favorite). */
 export const Bird = ({ className = "", ...rest }) => (
   <svg className={className} viewBox="0 0 64 56" {...rest}>
-    <path d="M10 40c8 2 14 1 18-3" stroke="#3b2d5e" strokeWidth="3" strokeLinecap="round" fill="none" />
-    <ellipse cx="34" cy="30" rx="20" ry="17" fill="#f2b38f" />
-    <path d="M22 30c6 9 18 10 26 2-4 12-22 14-26-2z" fill="#fbe3cf" />
-    <path d="M24 24c5-4 13-3 16 3-6 1-11 0-16-3z" fill="#e48f7c" />
+    <path d="M10 40c8 2 14 1 18-3" stroke="#5a2152" strokeWidth="3" strokeLinecap="round" fill="none" />
+    <ellipse cx="34" cy="30" rx="20" ry="17" fill="#f6a5bd" />
+    <path d="M22 30c6 9 18 10 26 2-4 12-22 14-26-2z" fill="#ffe4ec" />
+    <path d="M24 24c5-4 13-3 16 3-6 1-11 0-16-3z" fill="#e0708f" />
     <circle cx="44" cy="23" r="2.6" fill="#2b2340" />
     <circle cx="45" cy="22" r="0.8" fill="#fff" />
     <path d="M53 25l8 2-8 3z" fill="#f6c96b" />
     <circle cx="47" cy="29" r="2.4" fill="#e98a9a" opacity=".55" />
-    <path d="M30 46l-2 7M38 46l1 7" stroke="#3b2d5e" strokeWidth="2.2" strokeLinecap="round" />
+    <path d="M30 46l-2 7M38 46l1 7" stroke="#5a2152" strokeWidth="2.2" strokeLinecap="round" />
   </svg>
 );
 

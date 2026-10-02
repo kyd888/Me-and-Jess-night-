@@ -1,17 +1,27 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App.jsx";
+import Jess from "./jess/Jess.jsx";
 import "./theme.css";
 import "./styles.css";
-import { readSharedPlan } from "./lib/share.js";
-import { savePlan } from "./lib/storage.js";
 
-// Opened from Jess's QR code: pick up any Host Mode edits packed into the link.
-const shared = readSharedPlan();
-if (shared) savePlan(shared);
+// /kyd → Control Room (loaded separately so none of it ships with Jess's page).
+// Everything else (/jess, /) → Jess Mode.
+const isKyd = window.location.pathname.replace(/\/+$/, "").startsWith("/kyd");
+const root = ReactDOM.createRoot(document.getElementById("root"));
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+if (isKyd) {
+  document.title = "Control Room";
+  import("./kyd/Kyd.jsx").then(({ default: Kyd }) =>
+    root.render(
+      <React.StrictMode>
+        <Kyd />
+      </React.StrictMode>
+    )
+  );
+} else {
+  root.render(
+    <React.StrictMode>
+      <Jess />
+    </React.StrictMode>
+  );
+}

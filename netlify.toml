@@ -4,3 +4,28 @@
 
 [build.environment]
   NODE_VERSION = "20"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Single-page app routes (the API lives at /api/* via function paths)
+[[redirects]]
+  from = "/jess"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/jess/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/kyd"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/kyd/*"
+  to = "/index.html"
+  status = 200
