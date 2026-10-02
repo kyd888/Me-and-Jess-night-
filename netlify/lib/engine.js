@@ -87,18 +87,34 @@ const seedFor = (state, n) => `${state.sessionId}-${state.startedAt}-${n}`;
 
 const finishedPlans = (state) => state.rounds.map((r) => r.planId);
 const usedPlanIds = (state) => new Set([...finishedPlans(state), ...(state.round ? state.round.cards.map((c) => c.planId) : [])]);
-const mealsDone = (state) => state.rounds.filter((r) => state.plans.find((p) => p.id === r.planId)?.meal).length;
+const mealsDone = (state) =>
+  state.rounds.filter((r) => {
+    const p = state.plans.find((x) => x.id === r.planId);
+    return p?.meal || (p?.wildcard && r.category === "FOOD"); // "your call" in a food round = dinner
+  }).length;
+
+const planOf = (state, id) => state.plans.find((p) => p.id === id);
 
 export function availablePlans(state, category, now, { includeUsed = false } = {}) {
   const used = new Set(finishedPlans(state));
+  // Don't send you back to the same venue twice (home is fine, obviously).
+  const visited = new Set(
+    finishedPlans(state)
+      .map((id) => planOf(state, id))
+      .filter((p) => p && p.where === "out" && p.place)
+      .map((p) => p.place)
+  );
   const hungry = mealsDone(state) === 0;
   return state.plans.filter(
     (p) =>
       p.category === category &&
+      !p.wildcard &&
       p.enabled !== false &&
-      (includeUsed || !used.has(p.id)) &&
+      (includeUsed || (!used.has(p.id) && !(p.where === "out" && visited.has(p.place)))) &&
       isOpen(p, now) &&
-      // Long things (movies, drive-in) wait until after she's eaten.
+      // One real meal per night (force a category in the Control Room to override).
+      !(p.meal && !hungry && !includeUsed) &&
+      // Long things (full movies) wait until after she's eaten.
       !(hungry && !p.meal && (p.duration || 0) > 75)
   );
 }
@@ -114,33 +130,47 @@ export function categoryOptions(state, now, history = state.rounds.map((r) => r.
   const meals = mealsDone(state);
   const t = localMinutes(now);
   const done = history.length;
+  const late = t >= 22 * 60;
+  const lastRound = state.rounds[state.rounds.length - 1];
+  const atHome = lastRound && planOf(state, lastRound.planId)?.where === "home";
 
   return Object.keys(categories).map((id) => {
     const cat = categories[id];
     let reason = null;
-    let weight = 1;
+    let weight = cat.weight ?? 1;
 
     if (id === last) reason = "just did this";
-    else if (cat.group === lastGroup) weight *= 0.25;
+    else if (cat.group === lastGroup) weight *= 0.3;
+    if (count(id) >= 1) weight *= 0.4;
 
+    // One real meal; the later it gets without one, the more FOOD wants to happen.
     if (id === "FOOD" && meals >= 1) reason = reason || "already had a meal";
+    if (id === "FOOD" && meals === 0) weight *= t >= 19 * 60 + 30 ? 25 : t >= 19 * 60 ? 8 : done >= 1 ? 4 : 1.5;
+
+    // Dessert after food (or once the night's well underway), once.
     if (id === "SWEET" && count("SWEET") >= 1) reason = reason || "already had dessert";
     if (id === "SWEET" && meals === 0 && done < 3) reason = reason || "dessert comes after food";
-    if (id === "HOME" && done < 3 && t < 21 * 60 + 30) reason = reason || "too early for home";
-    if (id === "QUICK" && done === 0) weight *= 0.3;
-    if (count(id) >= 1 && id !== "QUICK") weight *= 0.35;
-
-    // Hunger: the later it gets without a meal, the more FOOD wants to happen.
-    if (id === "FOOD" && meals === 0) weight *= t >= 19 * 60 + 30 ? 25 : t >= 19 * 60 ? 8 : done >= 1 ? 4 : 1.5;
     if (id === "SWEET" && meals >= 1) weight *= 1.8;
-    // Once you're home, the night is winding down (dessert is still allowed).
-    if (history.includes("HOME") && id !== "SWEET") reason = reason || "you're already home";
-    // Late: wind down.
-    if (t >= 22 * 60) {
-      if (["HOME", "COZY", "SWEET", "CHILL"].includes(id)) weight *= 2.5;
-      if (["ADVENTURE", "FUN", "FOOD"].includes(id)) weight *= 0.4;
+
+    // Talking is optional: never first, never twice in a row, at most twice.
+    if (id === "TALK" && done === 0) reason = reason || "not as the first thing";
+    if ((id === "TALK" || id === "CHALLENGE") && count(id) >= 2) reason = reason || "already did two";
+
+    // Staying home is a real option, not a consolation prize.
+    if (id === "HOME") weight *= late ? 2 : done >= 2 ? 1.2 : 0.8;
+
+    // The cozy ending is for later in the night.
+    if (id === "COZY" && done < 3 && t < 21 * 60 + 30) reason = reason || "that's an ending, too early";
+    if (id === "COZY") weight *= late ? 3 : 1.5;
+    if (history.includes("COZY") && id !== "SWEET") reason = reason || "that was the cozy ending";
+
+    // Already settled in at home? Going back out is less likely.
+    if (atHome && id === "OUTING") weight *= 0.5;
+
+    if (late) {
+      if (["HOME", "COZY", "SWEET", "GAME"].includes(id)) weight *= 1.8;
+      if (["OUTING", "CHALLENGE"].includes(id)) weight *= 0.4;
     }
-    if (id === "HOME" && !reason) weight *= done >= 4 ? 3 : 1;
 
     const available = availablePlans(state, id, now).length;
     if (!reason && available === 0) reason = "nothing open / left";
@@ -178,13 +208,24 @@ function dealRound(state, category, now) {
   const roll = Math.random();
   const want = roll < 0.15 ? 2 : roll > 0.85 ? 4 : 3;
   const chosen = pool.slice(0, Math.min(want, pool.length));
+  // Sometimes one card is secretly "your call": you decide based on her vibe.
+  const wildcard = state.plans.find((p) => p.wildcard && p.enabled !== false);
+  if (wildcard && chosen.length >= 2 && Math.random() < (settings.yourCallChance ?? 0.15)) {
+    chosen[Math.floor(Math.random() * chosen.length)] = wildcard;
+  }
   const faces = shuffle(copy.faces);
   return {
     id: uid(),
     n: state.rounds.length + 1,
     category,
     intro: pickOne(copy.roundIntros),
-    cards: chosen.map((p, i) => ({ id: uid(), face: faces[i % faces.length], planId: p.id })),
+    cards: chosen.map((p, i) => ({
+      id: uid(),
+      face: faces[i % faces.length],
+      planId: p.id,
+      // Plans with several possible reveals (e.g. a random movie genre) get one now.
+      variant: p.jessFullOptions?.length ? pickOne(p.jessFullOptions) : null,
+    })),
     revealLine: pickOne(copy.revealLines),
     aside: pickAside(),
     createdAt: now,
@@ -219,7 +260,8 @@ function finishRound(state, jess, now) {
       id: round.id,
       label: `Card ${String(round.n).padStart(2, "0")}`,
       category: categories[round.category]?.label || "",
-      title: plan?.place === "Home" ? plan.name : plan?.place || plan?.name || "",
+      // Out: the venue. Home / anywhere: the short line she saw.
+      title: plan?.where === "out" ? plan.place || plan.name : round.cards.find((c) => c.planId === plan?.id)?.variant || plan?.jessFull || plan?.name || "",
       caption: plan?.caption || pickOne(copy.captions),
       icon: plan?.icon || "✦",
       at: pick.at,
@@ -373,12 +415,15 @@ function skyPhase(state) {
 }
 
 /** How a flipped card reads on Jess's phone, by revealMode. */
-function jessReveal(state, round, plan) {
+function jessReveal(state, round, plan, pickedPlan) {
   if (round.swappedPlanId && !round.revealedFull) {
+    // She picked "your call" and you chose: it stays a surprise.
+    if (pickedPlan?.wildcard) return { mode: "secret", text: "you'll see 👀", sub: "" };
     return { mode: "swapped", text: "change of plans 😭", sub: "" };
   }
   const mode = round.revealedFull ? "full" : plan.revealMode || "hint";
-  if (mode === "full") return { mode, text: plan.jessFull || plan.name, sub: "" };
+  const variant = !round.swappedPlanId && round.cards.find((c) => c.planId === plan.id)?.variant;
+  if (mode === "full") return { mode, text: variant || plan.jessFull || plan.name, sub: "" };
   if (mode === "secret") return { mode, text: "you'll see 👀", sub: "" };
   return { mode: "hint", text: plan.jessHint || categories[round.category]?.label, sub: "" };
 }
@@ -409,7 +454,7 @@ export function guestView(state, jess = freshJess()) {
       intro: round.intro,
       cards: round.cards.map((c) => ({ id: c.id, face: c.face })),
       picked: pick?.cardId || null,
-      reveal: plan ? { line: round.revealLine, aside: round.aside, icon: plan.icon, ...jessReveal(state, round, plan) } : null,
+      reveal: plan ? { line: round.revealLine, aside: round.aside, icon: plan.icon, ...jessReveal(state, round, plan, planOf(state, round.cards.find((c) => c.id === pick.cardId)?.planId)) } : null,
       requested: jess.requests.some((r) => r.roundId === round.id),
     },
     clues: started ? state.clues.filter((c) => c.roundId === clueKey).map(({ id, text }) => ({ id, text })) : [],
@@ -440,6 +485,8 @@ export function hostView(state, jess = freshJess(), now = Date.now()) {
     state,
     pick, // { cardId, at } or null
     activePlanId: activePlanId(round, pick),
+    // For a "your call" card: real options from this round's category.
+    yourCallOptions: round ? availablePlans(state, round.category, now).filter((p) => !round.cards.some((c) => c.planId === p.id)).map((p) => p.id) : [],
     // What YES would deal next. Only a preview until WE FINISHED THIS.
     nextPreview: state.stage === "between" ? state.nextCategory : chooseCategory(state, now, seedFor(state, state.rounds.length + (round ? 1 : 0)), projected),
     categoryOptions: categoryOptions(state, now),

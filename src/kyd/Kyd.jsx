@@ -148,7 +148,7 @@ function ControlRoom({ pin, onLock }) {
     );
   }
 
-  const { state, pick, activePlanId, nextPreview, categoryOptions, categories, requests, reactions } = data;
+  const { state, pick, activePlanId, nextPreview, categoryOptions, categories, requests, reactions, yourCallOptions = [] } = data;
   const planById = Object.fromEntries(state.plans.map((p) => [p.id, p]));
   const round = state.round;
   const plan = activePlanId ? planById[activePlanId] : null;
@@ -292,6 +292,14 @@ function ControlRoom({ pin, onLock }) {
               <p className="k-title">{catLabel(round.category)} · “{categories[round.category]?.label}”</p>
               <p className="k-label">Plan</p>
               <p className="k-big">{plan.icon} {plan.name}</p>
+              {plan.wildcard && (
+                <div className="k-yourcall">
+                  <p className="k-note">She picked YOUR CALL. Read the vibe and pick something. It stays secret on her phone ("you'll see 👀").</p>
+                  <button className="k-btn k-primary wide" onClick={() => setSheet({ type: "planPicker", startCategory: round.category, suggested: yourCallOptions })}>
+                    PICK THE PLAN
+                  </button>
+                </div>
+              )}
               {round.swappedPlanId && <span className="k-tag">swapped by you</span>}
               <dl className="k-facts">
                 <dt>Place</dt>

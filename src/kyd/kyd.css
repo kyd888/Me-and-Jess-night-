@@ -182,3 +182,4 @@ html:has(.kyd), html:has(.kyd) body { background: #1b1020; }
 .k-cat:disabled { opacity: 0.25; }
 .k-cat-icon { font-size: 26px; }
 .k-backup.is-off { opacity: 0.5; }
+.k-yourcall { margin: 10px 0; display: grid; gap: 10px; }

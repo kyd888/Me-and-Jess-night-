@@ -31,14 +31,34 @@ A surprise date night that plays like a little card game, which you secretly run
 
 You can always upgrade a reveal with **REVEAL FULL PLAN TO JESS**.
 
+### The idea pool
+There are **107 plans in 9 categories**, plus a secret wildcard card. They're all in `data/plan.js`:
+
+| Category | Jess sees | Examples |
+|---|---|---|
+| FOOD | "food" | Pad Thai at Lanna, Velvet Taco, Cajun Alfredo, somewhere new, takeout somewhere quiet, drive-thru roulette |
+| SWEET | "something sweet" | Braum's, M&M ice cream sandwiches, Cookies 'n' Creme + movie, Scooby snacks, dessert in the car |
+| COFFEE | "coffee / drinks" | dark coffee somewhere cozy, mushroom coffee, Alani + a drive, blind taste test |
+| GAME | "game time" | MW3, Oculus cooking, GTA chaos, winner picks dessert, loser picks the next card, arcade |
+| HOME | "movies / home" | **"yeah we're not going anywhere 😭"**, **"plot twist: couch."**, **"congratulations, you picked doing absolutely nothing."**, Pursuit of Happyness, Iron Giant, a thriller, a random genre |
+| OUTING | "little outing" | aimless drive, bookstore, record store, $10 Target challenge, a view, weird Tulsa spots |
+| TALK | "let's talk" | optional and light: dream trips, embarrassing stories, one hypothetical, a deeper one *only if the vibe is right* |
+| CHALLENGE | "little challenge" | pick each other's snack, find something pink, one veto tonight, tier list |
+| COZY | "cozy ending" | movie at home, COD, snacks + talking, order in, do nothing at all |
+
+- **Staying home is not the boring option.** HOME can come up at any point in the night, and gets more likely as it gets later.
+- **"Your call":** about 15% of rounds (`yourCallChance`), one card is secretly YOUR CALL. She sees *"your call 👀 (mine, actually)"*. Your phone says she picked YOUR CALL, and **PICK THE PLAN** opens real options from that round's category. Whatever you choose stays *"you'll see 👀"* on her phone until you reveal it.
+- **Random genre:** the "movie night" card picks a random genre for her to see; you two pick the movie together.
+
 ### How the next category gets picked
 The rules are curated, not chaotic:
-- **No repeats:** never the same category twice in a row, and similar ones (FUN/GAME, CHILL/COZY) rarely follow each other.
-- **One meal:** only one real meal. The later it gets without food, the more likely FOOD becomes.
-- **Food comes first:** dessert normally comes after a meal, and long things (movies, the drive-in) wait until after she's eaten.
-- **Home is the end:** HOME only shows up later in the night, and once you're home only dessert is still suggested.
-- **Open places only:** plans that close within ~30 min are skipped (using `closesAt`, in Tulsa time).
-- **No reruns:** plans you already did are never dealt again.
+- **No repeats:** never the same category twice in a row, and similar ones (GAME/CHALLENGE, HOME/COZY) rarely follow each other.
+- **One meal:** only one real meal, counting "order in" at the end. The later it gets without food, the more likely FOOD becomes.
+- **Dessert after food:** dessert normally comes after a meal, and full movies wait until after she's eaten.
+- **Talking is optional:** TALK never comes first, shows up less often, and happens at most twice.
+- **Cozy is the ending:** COZY only comes up later, and after it only dessert is still suggested.
+- **Already home?** Going back out becomes less likely.
+- **Open places only:** places closing within ~30 min are skipped (Tulsa time). The same venue is never dealt twice.
 - **Different every night:** the randomness is seeded per night.
 
 **You can override all of it.** CHOOSE CATEGORY MYSELF shows every category, with the reason the engine would skip it, and you can force any of them. RESHUFFLE and CHANGE CATEGORY work while she's still choosing.
@@ -47,7 +67,7 @@ The rules are curated, not chaotic:
 After a flip, she can tap **not feeling this?** and pick a vibe: Just surprise me / Feed me / Something fun / Something chill / Something sweet / Can we just be cozy?
 - **She never sees a place.**
 - **You get the request** with a suggested switch and other backups → **USE THIS PLAN / CHOOSE ANOTHER / IGNORE**.
-- **Swapping a plan** shows her *"plot twist 😭 plan changed"* (with the "my fault gang" sticker) and keeps the new place secret until you reveal it.
+- **Swapping a plan** shows her *"change of plans 😭"* and keeps the new place secret until you reveal it.
 
 ### Reactions (real GIFs, sparingly)
 All reaction GIFs live in **`src/data/reactionLibrary.js`**. Components never hardcode a GIF; they ask for a reaction by *context*:
@@ -68,7 +88,7 @@ All reaction GIFs live in **`src/data/reactionLibrary.js`**. Components never ha
 - **The old pack is unused:** the earlier illustrated meme pack is still in `public/memes/`, but nothing references it anymore.
 
 ## Editing
-- **Everything about the night is in `data/plan.js`:** opening beats, categories and their labels, the **card library** (31 Tulsa plans), reveal lines, the occasional sweet and flirty asides, captions, card faces, the finale note.
+- **Everything about the night is in `data/plan.js`:** opening beats, categories and their labels, the **card library** (107 plans + the "your call" card), reveal lines, the occasional sweet and flirty asides, captions, card faces, the finale note.
 - **Tone:** everything Jess sees is written as you talking: short and simple, no explaining (you'll explain in person). Mostly playful, sometimes sweet, rarely flirty. No pet names or relationship labels. Sweet lines show on ~18% of reveals and flirty ones on ~10% (`pickAside` in `netlify/lib/engine.js`).
 - **Reaction GIFs** live in `src/data/reactionLibrary.js`.
 - **During the night:** use **Card library** in the Control Room. Toggle any plan on/off (closed, not in the mood), edit it, or add a new one. Edits live with the current night.
