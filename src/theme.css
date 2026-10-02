@@ -1,0 +1,39 @@
+/* ─────────────────────────────────────────────
+   THEME: change colors & fonts here.
+   ───────────────────────────────────────────── */
+:root {
+  /* Night palette */
+  --ink: #2b2340;          /* main text on paper */
+  --ink-soft: #6d6286;     /* secondary text on paper */
+  --paper: #fffaf1;        /* cards / tickets */
+  --paper-2: #f6ead8;      /* ticket stubs, edges */
+  --cream: #fdf2e4;        /* text on the sky */
+  --cream-soft: rgba(253, 242, 228, 0.72);
+
+  --peach: #f2b38f;
+  --rose: #e98a9a;
+  --gold: #f6c96b;
+  --plum: #3b2d5e;
+  --night: #1b1634;
+
+  /* Buttons */
+  --btn: #f6c96b;
+  --btn-edge: #c98f3d;
+  --btn-ink: #3a2a1c;
+
+  /* Fonts */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-hand: "Caveat", "Bradley Hand", cursive;
+  --font-body: "Nunito", -apple-system, system-ui, sans-serif;
+
+  /* Shape */
+  --radius: 22px;
+  --shadow: 0 18px 40px -18px rgba(15, 8, 40, 0.65);
+}
+
+/* Sky phases: the night gets darker each chapter. */
+.sky-0 { background: linear-gradient(180deg, #4b3a6e 0%, #a46a86 42%, #f0a987 74%, #f8d3a4 100%); }
+.sky-1 { background: linear-gradient(180deg, #3a2d60 0%, #85567f 45%, #e39882 80%, #f2c29b 100%); }
+.sky-2 { background: linear-gradient(180deg, #2a2150 0%, #5e4378 48%, #b07090 82%, #e2a08e 100%); }
+.sky-3 { background: linear-gradient(180deg, #1c1740 0%, #362a5e 50%, #6a4a7c 85%, #a06a86 100%); }
+.sky-4 { background: linear-gradient(180deg, #120f2b 0%, #221b45 55%, #3d2d5e 88%, #5d4073 100%); }
