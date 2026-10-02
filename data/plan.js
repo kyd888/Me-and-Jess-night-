@@ -32,10 +32,9 @@ export const settings = {
   timeZone: "America/Chicago",
   // Used only if the HOST_PIN env var isn't set on Netlify.
   fallbackPin: "0630",
-  memeChance: 0.3, // ~30% of picks get a meme reaction before the flip
   finale: {
     title: "That's the night.",
-    note: "Thanks for letting me run the whole night. You picked well. Mostly. 😭",
+    note: "Thanks for letting me run the whole night. I'm really glad you came. You picked well. Mostly. 😭",
     signature: "— Kyd",
   },
 };
@@ -156,37 +155,62 @@ export const moods = {
   cozy: { label: "Can we just be cozy?", emoji: "🏠", categories: ["HOME", "COZY"] },
 };
 
-/** All the little lines. Edit freely. These are you talking. */
+/**
+ * All the little lines. Edit freely. These are you talking.
+ *
+ * Tone: mostly playful (~60%), sometimes sweet (~25%), rarely flirty (~15%).
+ * No pet names, no relationship labels. Reaction GIFs live in
+ * src/data/reactionLibrary.js, not here.
+ */
 export const copy = {
   // Above the face-down cards
-  roundIntros: ["pick a card. any card.", "choose wisely 👀", "no pressure (a little pressure)", "trust your gut", "eeny meeny…", "you got this. probably.", "go with your heart. or the cute one."],
-  // Top line when a card flips
+  roundIntros: [
+    "pick a card. any card.",
+    "choose wisely 👀",
+    "no pressure (a little pressure)",
+    "trust your gut",
+    "eeny meeny…",
+    "you got this. probably.",
+    "don't overthink it lol",
+  ],
+  // Top line when a card flips: playful, every time
   revealLines: [
-    "ohhhh so THAT'S the one you picked 😭",
-    "okayyy Jess 👀",
-    "you sure about that one?",
-    "too late now lol",
-    "wait this one is actually cute",
-    "not you picking the exact one I thought you would",
-    "okay pretty girl, let's go",
-    "yeahhh I was hoping you'd pick this one",
-    "plot twist 😭",
+    "okayyy next stop 👀",
+    "alright let's go lol",
+    "you picked it, don't look at me 😭",
+    "interesting choice...",
+    "this one might actually be good",
+    "okay I was hoping you'd pick this one",
+    "yeahhh trust me",
+    "plot twist",
+    "come on, we got places to be",
+    "don't worry about it 👀",
+    "okay this one is kinda cute ngl",
+    "not telling you yet",
+    "just trust the process",
+    "don't blame me, you picked the card",
     "you got it big dawg 🫡",
-    "this might be my favorite one",
-    "don't look at me like that, you picked it 😭",
-    "alright come on",
-    "you trusted me this far 🤷🏾‍♂️",
-    "okay this is kinda adorable I'm ngl",
-    "correct answer.",
     "be so fr 😭",
     "I know that's right",
+    "well!",
+    "noted 📝",
+    "okayyyy 👀",
   ],
-  // Occasionally added under a reveal (light flirting, ~35% of reveals)
-  asides: [
-    "you look cute btw. anyway…",
-    "don't get distracted I'm trying to run a date here",
-    "you can hold my hand on the way I guess 🙄",
-    "okay pretty girl, next stop",
+  // Occasional extra line under a reveal. Sweet: ~18% of reveals.
+  sweet: [
+    "I'm glad you're here.",
+    "I thought you'd like this one.",
+    "this reminded me of you.",
+    "okay yeah, I picked this one with you in mind.",
+    "hope you're having fun :)",
+  ],
+  // Light flirting, rarely: ~10% of reveals.
+  flirty: [
+    "you look nice btw. anyway...",
+    "okay don't get distracted 😭",
+    "not you making this difficult",
+    "alright, I'm not giving you another hint",
+    "you're kinda good at this",
   ],
   // Scrapbook captions when a plan has none
   captions: ["10/10 would pick again", "certified good pick", "you did that 🫡", "core memory (probably)", "we're not talking about it", "elite choice ngl"],
@@ -204,16 +228,5 @@ export const copy = {
     { icon: "", text: "?" },
     { icon: "🎲", text: "" },
     { icon: "", text: "trust me" },
-  ],
-  // Meme reactions shown before the flip (~30% of picks). Files live in public/memes.
-  memes: [
-    { src: "/memes/gifs/sideeye_loop.gif", line: "interesting..." },
-    { src: "/memes/gifs/oh_thats_not_zoom.gif", line: "you picked THAT one???" },
-    { src: "/memes/gifs/im_crying_shake.gif", line: "oh brother 😭" },
-    { src: "/memes/gifs/clock_it_nod.gif", line: "noted." },
-    { src: "/memes/cats/be_so_fr.png", line: "processing this decision..." },
-    { src: "/memes/cats/oh_thats_not.png", line: "okay wait" },
-    { src: "/memes/cats/you_got_it_bigdawg.png", line: "👀" },
-    { src: "/memes/text_stickers/the_gag_is.png", line: "" },
   ],
 };

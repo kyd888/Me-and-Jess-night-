@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Clues } from "./Clues.jsx";
 import { local } from "../lib/api.js";
+import { Reaction, pickReaction } from "../lib/reactions.jsx";
 
-const MEME_MS = 1900;
+const MEME_MS = 2200;
 
 /** One face of a mystery card. Never a clue, just vibes. */
 function Face({ face, big }) {
@@ -15,8 +16,14 @@ function Face({ face, big }) {
   );
 }
 
+/** Shown on the card when Kyd swaps the plan ("my fault gang 😭"). */
+function SwapReaction() {
+  const [reaction] = useState(() => pickReaction("swapped", { force: true }));
+  return <Reaction reaction={reaction} className="reaction-small" />;
+}
+
 /**
- * Face-down cards → she picks → (sometimes a meme) → the card flips.
+ * Face-down cards → she picks → (~30% of the time a reaction GIF) → the card flips.
  * The server decides what's under each card; this phone never knows
  * until she's picked.
  */
@@ -36,9 +43,11 @@ export default function Round({ round, clues, me, nightId, onPick, onReact, onNo
     if (chosen) return;
     setChosen(cardId);
     setStage("waiting");
+    // Decide on a reaction now and start loading the GIF while the pick saves.
+    const m = pickReaction("pick");
+    if (m?.src) new Image().src = m.src;
     try {
-      const view = await onPick(cardId);
-      const m = view?.round?.meme;
+      await onPick(cardId);
       if (m) {
         setMeme(m);
         later(() => setStage("meme"), 500);
@@ -96,7 +105,7 @@ export default function Round({ round, clues, me, nightId, onPick, onReact, onNo
                   <span className="reveal-icon">{r.mode === "secret" || r.mode === "swapped" ? "🤫" : r.icon}</span>
                   <h2 className="reveal-title">{r.text}</h2>
                   {r.sub && <p className="reveal-sub">{r.sub}</p>}
-                  {r.sticker && <img className="sticker" src={r.sticker} alt="" />}
+                  {r.mode === "swapped" && <SwapReaction />}
                 </>
               )}
             </article>
@@ -109,8 +118,7 @@ export default function Round({ round, clues, me, nightId, onPick, onReact, onNo
         meme &&
         createPortal(
           <div className="meme-pop">
-            <img src={meme.src} alt="" />
-            {meme.line && <p className="meme-line">{meme.line}</p>}
+            <Reaction reaction={meme} />
           </div>,
           document.body
         )}

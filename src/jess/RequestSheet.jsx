@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Reaction, pickReaction } from "../lib/reactions.jsx";
 
 const OPTIONS = [
   ["surprise", "🩷", "Just surprise me"],
@@ -13,9 +14,13 @@ const OPTIONS = [
 export default function RequestSheet({ me, onSend, onClose }) {
   const [phase, setPhase] = useState("pick"); // pick | sent | done
   const [mood, setMood] = useState(null);
+  const [reaction, setReaction] = useState(null);
 
   const pick = async (m) => {
     setMood(m);
+    const r = pickReaction(m === "surprise" ? "surprise" : "switch", { force: true });
+    if (r?.src) new Image().src = r.src;
+    setReaction(r);
     setPhase("sent");
     try {
       await onSend(m);
@@ -23,8 +28,8 @@ export default function RequestSheet({ me, onSend, onClose }) {
       setPhase("pick");
       return;
     }
-    setTimeout(() => setPhase("done"), 1600);
-    setTimeout(onClose, 3800);
+    setTimeout(() => setPhase("done"), 2600);
+    setTimeout(onClose, 5200);
   };
 
   const surprise = mood === "surprise";
@@ -48,16 +53,12 @@ export default function RequestSheet({ me, onSend, onClose }) {
             </button>
           </>
         )}
-        {phase === "sent" && (
-          <>
-            <img className="sticker sticker-center pop-in" src={surprise ? "/memes/text_stickers/correct_answer.png" : "/memes/text_stickers/i_know_thats_right.png"} alt="" />
-            <p className="sheet-big rise">{surprise ? "Correct answer." : `Request sent to ${me} 👀`}</p>
-          </>
-        )}
+        {phase === "sent" && <Reaction reaction={reaction} className="reaction-sheet pop-in" />}
         {phase === "done" && (
-          <p className="sheet-big hand rise">
-            {surprise ? `${me} has it from here.` : "Okay, you're off planning duty again."}
-          </p>
+          <>
+            {!surprise && <p className="sheet-big rise">Request sent to {me} 👀</p>}
+            <p className="sheet-big hand rise">{surprise ? `${me} got it from here.` : "okay, you're off planning duty again."}</p>
+          </>
         )}
       </div>
     </div>

@@ -4,6 +4,7 @@ A surprise date night that plays like a little card game, which you secretly run
 
 | | Link | Who |
 |---|---|---|
+| **Laptop homepage** | `https://<your-site>.netlify.app/` | Open this on your laptop before she gets there. It's a big QR code she scans to open her page. No spoilers on it. |
 | **Jess Mode** | `https://<your-site>.netlify.app/jess` | Jess. Pink, simple, a little meme-y. She flips mystery cards and only finds out what she picked *after* it flips. |
 | **Kyd Control Room** | `https://<your-site>.netlify.app/kyd` | You, with a PIN. You see what's under every card, the full logistics, her requests, and every control. |
 
@@ -15,7 +16,7 @@ A surprise date night that plays like a little card game, which you secretly run
 4. **Card rounds:**
    - **The server picks a category** for the next part of the night ("food. obviously.", "something fun", "little adventure"…).
    - **She sees 2–4 face-down cards**, usually 3. Each one hides a *different* real plan from that category. The card faces (🐦 ✦ "pick me" "don't pick me" 👀…) are random every round and never hint at what's underneath.
-   - **She picks one.** About 30% of the time a meme reaction pops up first ("interesting...", side-eye cat). Then the card flips: *"okayyy Jess 👀"* + the reveal.
+   - **She picks one.** About 30% of the time a reaction GIF pops up first ("now why would you pick that one 😭"). Then the card flips: *"okayyy next stop 👀"* + the reveal.
    - **Your phone chimes and lights up: JESS PICKED A CARD.** It shows the category, plan, place, address, duration, cost, what to do, an OPEN DIRECTIONS button, a backup, and what she passed on.
    - **You tap WE FINISHED THIS ✓** when you're actually done. The card goes in her scrapbook with the real time and a caption ("you demolished that btw").
    - **"Generate next part of night?" → YES / WAIT / CHOOSE CATEGORY MYSELF.** Nothing new shows up on her phone until you say so.
@@ -48,16 +49,28 @@ After a flip, she can tap **not feeling this?** and pick a vibe: Just surprise m
 - **You get the request** with a suggested switch and other backups → **USE THIS PLAN / CHOOSE ANOTHER / IGNORE**.
 - **Swapping a plan** shows her *"plot twist 😭 plan changed"* (with the "my fault gang" sticker) and keeps the new place secret until you reveal it.
 
-### Memes (sparingly)
-Pack lives in `public/memes/`. Where they show up:
-- **Meme reactions** before ~30% of card flips (`memeChance` in `data/plan.js`)
-- **"correct answer."** sticker for *Just surprise me*; **"I know that's right"** for other requests
-- **"wait"** sticker on your full-screen messages
-- **"my fault gang"** when you swap a plan
-- **Hidden:** tap the bird on the waiting screen 5 times
+### Reactions (real GIFs, sparingly)
+All reaction GIFs live in **`src/data/reactionLibrary.js`**. Components never hardcode a GIF; they ask for a reaction by *context*:
+
+| Context | When | Draws from | Caption |
+|---|---|---|---|
+| `pick` | ~30% of card picks, before the flip | SIDE_EYE, JUDGING, SHOCKED, AWKWARD, CRYING_LAUGHING, NO_WAY, CAT_CHAOS | "now why would you pick that one 😭", "noted 📝", "be so fr 😭"… |
+| `surprise` | she taps *Just surprise me* | CELEBRATING, LETS_GO | "I KNOW THAT'S RIGHT" → "Kyd got it from here." |
+| `switch` | she asks to change the vibe | SIDE_EYE, JUDGING, CAT_CHAOS | "oh so NOW you wanna switch 😭" |
+| `swapped` | you swap her plan | AWKWARD, CRYING_LAUGHING | "my fault gang 😭" |
+| `easterEgg` | she taps the waiting-screen bird 5× | CAT_CHAOS | "clock it." |
+
+- **Each entry** looks like `{ id, source: "giphy" | "tenor" | "local", url, type, category, moods, weight }`.
+- **For GIPHY**, paste either the GIF id or any giphy.com link. **For Tenor**, use the direct `media.tenor.com/...gif` URL. **For your own files**, drop them in `public/memes/` and use `source: "local"`.
+- **To swap a GIF**, change its `url`. **To retire one**, set `weight: 0`. Change `chance` in `contexts` to make reactions more or less frequent.
+- **Every GIF must be checked before the date.** The starter set (~30 GIFs) came from GIPHY search results, but I couldn't preview any of them because GIPHY is blocked where this was built. Open `/jess?s=test`, or paste each `https://giphy.com/gifs/<id>` link into your browser, and swap anything that doesn't fit.
+- **No broken images:** if a GIF won't load, the caption still shows on its own.
+- **The old pack is unused:** the earlier illustrated meme pack is still in `public/memes/`, but nothing references it anymore.
 
 ## Editing
-- **Everything about the night is in `data/plan.js`:** opening beats, categories and their labels, the **card library** (31 Tulsa plans), reveal lines, flirty asides, captions, card faces, memes, the finale note.
+- **Everything about the night is in `data/plan.js`:** opening beats, categories and their labels, the **card library** (31 Tulsa plans), reveal lines, the occasional sweet and flirty asides, captions, card faces, the finale note.
+- **Tone** is mostly playful, sometimes sweet, rarely flirty. No pet names or relationship labels. Sweet lines show on ~18% of reveals and flirty ones on ~10% (`pickAside` in `netlify/lib/engine.js`).
+- **Reaction GIFs** live in `src/data/reactionLibrary.js`.
 - **During the night:** use **Card library** in the Control Room. Toggle any plan on/off (closed, not in the mood), edit it, or add a new one. Edits live with the current night.
 - **⋯ → Reset night** reloads `data/plan.js` and wipes the current night.
 - **Colors:** `src/theme.css` (pink is the signature).
@@ -81,12 +94,12 @@ Pack lives in `public/memes/`. Where they show up:
 2. **Deploy:** push to the branch Netlify builds from. `netlify.toml` already sets up the build, the functions and the `/jess` + `/kyd` routes. Blobs needs no setup.
 3. **Do a test run:** open `/kyd?s=test` and `/jess?s=test` on two phones. That's a separate practice night, so the real one stays clean.
 4. **Add the Control Room to your Home Screen:** on your iPhone, open `/kyd` in Safari → Share → Add to Home Screen.
-5. **Send Jess her link:** text her `/jess`, or show her the QR code in the Control Room's ⋯ menu.
+5. **Show Jess her QR code:** open the site root `/` on your laptop and leave it up. It's a big QR code, and its text changes once the night starts. Or text her `/jess`, or use the QR in the Control Room's ⋯ menu.
 
 ## Run locally
 ```bash
 npm install
-npm run dev     # http://localhost:5173/jess  and  /kyd  (PIN 0630)
+npm run dev     # http://localhost:5173/ (laptop QR), /jess, /kyd (PIN 0630)
 ```
 The dev server includes an in-memory stand-in for the Netlify Functions, so both pages work locally. Restarting it resets the night. Use `netlify dev` to test against real Blobs.
 
@@ -99,8 +112,11 @@ netlify/
   lib/engine.js              ← sequencing rules, dealing cards, reveals, guest view
   lib/api.js                 ← request handling shared by functions + dev server
   lib/blobStore.js           ← Netlify Blobs (strong consistency)
-public/memes/                ← the meme pack
+public/memes/                ← drop local GIFs here (old pack, unused)
 src/
+  home/Home.jsx              ← laptop homepage with Jess's QR code (/)
+  data/reactionLibrary.js    ← every reaction GIF + caption, by context
+  lib/reactions.jsx          ← picks a reaction for a context; GIF with caption fallback
   jess/                      ← Waiting, Onboarding, Beat, Round (cards), Between, RequestSheet, Scrapbook, Finale
   kyd/                       ← Kyd.jsx (Control Room), Library, Sheets, kyd.css
   components/  lib/api.js  theme.css  styles.css

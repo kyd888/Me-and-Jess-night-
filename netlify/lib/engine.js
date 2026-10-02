@@ -160,6 +160,17 @@ export function chooseCategory(state, now, seed, history) {
   return opts[opts.length - 1].id;
 }
 
+/**
+ * The rare extra line under a reveal. Sweet more often than flirty,
+ * and most reveals get nothing at all.
+ */
+function pickAside() {
+  const roll = Math.random();
+  if (roll < 0.18) return pickOne(copy.sweet);
+  if (roll < 0.28) return pickOne(copy.flirty);
+  return null;
+}
+
 /** Deal 2–4 different plans face-down (usually 3), shuffled, with random faces. */
 function dealRound(state, category, now) {
   const pool = shuffle(availablePlans(state, category, now));
@@ -174,9 +185,8 @@ function dealRound(state, category, now) {
     category,
     intro: pickOne(copy.roundIntros),
     cards: chosen.map((p, i) => ({ id: uid(), face: faces[i % faces.length], planId: p.id })),
-    meme: Math.random() < settings.memeChance ? pickOne(copy.memes) : null,
     revealLine: pickOne(copy.revealLines),
-    aside: Math.random() < 0.35 ? pickOne(copy.asides) : null,
+    aside: pickAside(),
     createdAt: now,
     swappedPlanId: null,
     revealedFull: false,
@@ -365,7 +375,7 @@ function skyPhase(state) {
 /** How a flipped card reads on Jess's phone, by revealMode. */
 function jessReveal(state, round, plan) {
   if (round.swappedPlanId && !round.revealedFull) {
-    return { mode: "swapped", text: "plot twist 😭", sub: `plan changed. ${settings.me}'s on it.`, sticker: "/memes/text_stickers/my_fault_gang.png" };
+    return { mode: "swapped", text: "plot twist 😭", sub: `plan changed. ${settings.me}'s on it.` };
   }
   const mode = round.revealedFull ? "full" : plan.revealMode || "hint";
   if (mode === "full") return { mode, text: plan.jessFull || plan.name, sub: `${settings.me} has the directions.` };
@@ -400,7 +410,6 @@ export function guestView(state, jess = freshJess()) {
       cards: round.cards.map((c) => ({ id: c.id, face: c.face })),
       picked: pick?.cardId || null,
       reveal: plan ? { line: round.revealLine, aside: round.aside, icon: plan.icon, ...jessReveal(state, round, plan) } : null,
-      meme: pick ? round.meme : null,
       requested: jess.requests.some((r) => r.roundId === round.id),
     },
     clues: started ? state.clues.filter((c) => c.roundId === clueKey).map(({ id, text }) => ({ id, text })) : [],
