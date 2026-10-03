@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import Sky from "../components/Sky.jsx";
 import { Bird } from "../components/icons.jsx";
 import { guestApi, sessionId, usePoll } from "../lib/api.js";
+import { greeting, useTimeOfDay } from "../lib/timeOfDay.js";
 
 const jessLink = () => `${window.location.origin}/jess${sessionId !== "tonight" ? `?s=${encodeURIComponent(sessionId)}` : ""}`;
 
@@ -17,6 +18,7 @@ export default function Home() {
   const [svg, setSvg] = useState("");
   const { data } = usePoll(guestApi.get, 5000);
   const line = STATUS_LINES[data?.status || "waiting"];
+  const tod = useTimeOfDay();
 
   useEffect(() => {
     QRCode.toString(link, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#3a1f33", light: "#00000000" } }).then(setSvg);
@@ -24,10 +26,10 @@ export default function Home() {
 
   return (
     <>
-      <Sky phase={data?.phase ?? 0} />
+      <Sky tod={tod} />
       <main className="home">
         <section className="home-copy">
-          <h1 className="display home-title rise" style={{ "--d": "0.3s" }}>Hey Jess.</h1>
+          <h1 className="display home-title rise" style={{ "--d": "0.3s" }}>{greeting(tod)}</h1>
           <p className="lede home-lede rise" style={{ "--d": "0.6s" }}>{line}</p>
         </section>
 

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Bird } from "../components/icons.jsx";
 import { Reaction, pickReaction } from "../lib/reactions.jsx";
+import { greeting } from "../lib/timeOfDay.js";
 
 const LINES = ["not yet 👀", "patience, jess", "*bird is also waiting*", "soon.", "no peeking"];
 
-export default function Waiting({ me }) {
+export default function Waiting({ me, tod }) {
   const [chirp, setChirp] = useState(null);
   const [taps, setTaps] = useState(0);
   const [egg, setEgg] = useState(null);
@@ -27,7 +28,7 @@ export default function Waiting({ me }) {
       {/* Hidden detail: bother the bird 5 times. */}
       {egg && <Reaction reaction={egg} className="easter-cat pop-in" />}
       <h1 className="display rise" style={{ "--d": "0.2s" }}>
-        Hey Jess.
+        {greeting(tod)}
       </h1>
       <p className="lede rise" style={{ "--d": "0.6s" }}>
         not yet 👀

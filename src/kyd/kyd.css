@@ -183,3 +183,12 @@ html:has(.kyd), html:has(.kyd) body { background: #1b1020; }
 .k-cat-icon { font-size: 26px; }
 .k-backup.is-off { opacity: 0.5; }
 .k-yourcall { margin: 10px 0; display: grid; gap: 10px; }
+
+/* Date settings */
+.k-settings .k-label { margin-top: 14px; }
+.k-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.k-seg-btn { min-height: 40px; padding: 0 12px; border-radius: 12px; background: #2e1b2a; color: #d9bccb; font-weight: 700; font-size: 13px; }
+.k-seg-btn.is-on { background: #f28bab; color: #3a0f26; }
+.k-seg-btn:disabled { opacity: 0.6; }
+.k-chill { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: #173225; color: #8ff0b8; font-weight: 700; }
+.k-linklike { color: #f7a8c0; text-decoration: underline; font-weight: 700; margin-left: 6px; }

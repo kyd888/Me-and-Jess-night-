@@ -31,8 +31,41 @@ A surprise date night that plays like a little card game, which you secretly run
 
 You can always upgrade a reveal with **REVEAL FULL PLAN TO JESS**.
 
+### Date settings (Control Room only)
+At the top of the Control Room. **Jess never sees any of it**, and you can change it before or during the date. A change only affects what's dealt *next*; nothing resets.
+
+| Setting | Options | What it does |
+|---|---|---|
+| **Date length** | Quick (45–75 min, 1–2 rounds) · Short (1.5–2 hrs, 2–3) · Full (3–5 hrs, 4–6) · Open (no target) | Caps how long a single plan can be (Quick ≤ 50 min, Short ≤ 75). When the length is reached, "Generate next part?" becomes **That's a complete date ✓ → END THE DATE / KEEP CHILLING / ONE MORE ANYWAY**. Quick and Short dates end with a little line ("successful side quest.", "10/10 would hang again"), not the big finale. |
+| **City** | Tulsa · Oklahoma City · Custom | Deals that city's plans plus anything that works anywhere (chains, drives, challenges). Away from Tulsa, at-home plans are skipped. Custom = only the works-anywhere ideas. |
+| **Where we are now** | that city's districts | Keeps stops close: same-district plans get dealt first (strongly in Quick). After each stop, the last stop's district takes over. |
+| **Energy** | Very chill · Normal · Let's do something | Chill favors coffee, sweets, talking and home, and skips walking-heavy plans. Active favors outings, games and challenges. |
+| **Current vibe** | Hungry · Sweet · Coffee · Game · Talk · Random · Home | Heavily favors those categories until you clear it. |
+| **Opening** | on/off (before starting) | Turn off the "come inside / flowers" beats for a quick date away from home. |
+
+**KEEP CHILLING:** tap it on a card in progress, or between rounds, and nothing new gets dealt until you're ready. Her phone just says "phone down 😌".
+
+### Time-of-day look
+Jess's page and the laptop homepage follow **her phone's own clock**, and fade between periods without a refresh:
+- **morning** 6–11 (cream, light pink, pale blue, a soft sun; "good morninggg")
+- **daytime** 11–5 (blush + sky blue, sun up, no stars)
+- **golden hour** 5–8 (peach, rose, soft orange, a setting sun)
+- **night** 8–6 (deep pink, berry, purple, navy, stars and a moon)
+
+This is presentation only. The cards and progress don't change. To preview a look, add `?tod=morning`, `day`, `golden` or `night` to the URL.
+
+### Oklahoma City bank
+27 OKC plans, chosen when City = Oklahoma City:
+- **Food:** Four J's Lao & Thai, Empire Slice House (Plaza), The Collective (Midtown), Parlor, plus generic pizza / tacos / pasta / comfort food / takeout in the car
+- **Sweet:** Perets Dessert & Coffee Bar, Boom Town Creamery, Roxy's Ice Cream Social (Plaza), plus cookies / a bakery
+- **Coffee:** Perets, Elemental, Clarity
+- **Fun:** Factory Obscura Mix-Tape (medium activity), Cactus Jack's, "arcade for 20 minutes"
+- **Quick cards:** "one slice and keep moving", "drive somewhere pretty", "sit somewhere and talk", "do absolutely nothing for 20 minutes 😭"
+
+⚠️ Most OKC addresses and hours are marked **verify**. They're best guesses, so check them before you go.
+
 ### The idea pool
-There are **107 plans in 9 categories**, plus a secret wildcard card. They're all in `data/plan.js`:
+There are **107 Tulsa/anywhere plans in 9 categories** (plus the OKC bank below), plus a secret wildcard card. They're all in `data/plan.js`:
 
 | Category | Jess sees | Examples |
 |---|---|---|

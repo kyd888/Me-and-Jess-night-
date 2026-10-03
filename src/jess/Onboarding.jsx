@@ -1,12 +1,14 @@
-export default function Onboarding({ step, onNext, me }) {
+import { dayWord, greeting } from "../lib/timeOfDay.js";
+
+export default function Onboarding({ step, onNext, me, tod }) {
   if (step === 0) {
     return (
       <section className="center-screen">
         <h1 className="display rise" style={{ "--d": "0.3s" }}>
-          Hey Jess.
+          {greeting(tod)}
         </h1>
         <p className="lede rise" style={{ "--d": "0.7s" }}>
-          you don't have to plan anything tonight.
+          {tod === "morning" ? "okay we outside early apparently. " : ""}you don't have to plan anything {dayWord(tod)}.
         </p>
         <button className="btn btn-primary rise wide" style={{ "--d": "1.1s" }} onClick={onNext}>
           okay

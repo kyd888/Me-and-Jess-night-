@@ -3,6 +3,7 @@ import Sky from "../components/Sky.jsx";
 import Toast from "../components/Toast.jsx";
 import { Bird } from "../components/icons.jsx";
 import { guestApi, local, usePoll } from "../lib/api.js";
+import { useTimeOfDay } from "../lib/timeOfDay.js";
 import Waiting from "./Waiting.jsx";
 import Onboarding from "./Onboarding.jsx";
 import Beat from "./Beat.jsx";
@@ -24,6 +25,7 @@ export default function Jess() {
   const toastTimer = useRef();
 
   const me = data?.me || "Kyd";
+  const tod = useTimeOfDay();
 
   const showToast = (text) => {
     clearTimeout(toastTimer.current);
@@ -78,7 +80,7 @@ export default function Jess() {
     );
   } else if (data.status === "waiting") {
     key = "waiting";
-    screen = <Waiting me={me} />;
+    screen = <Waiting me={me} tod={tod} />;
   } else if (data.status === "finished") {
     key = "finale";
     screen = <Finale finale={data.finale} scrapbook={data.scrapbook} />;
@@ -86,7 +88,7 @@ export default function Jess() {
     screen = null;
   } else if (onboard < 2) {
     key = `onboard-${onboard}`;
-    screen = <Onboarding step={onboard} onNext={nextOnboard} me={me} />;
+    screen = <Onboarding step={onboard} onNext={nextOnboard} me={me} tod={tod} />;
   } else if (data.stage === "opening" && data.beat) {
     key = `beat-${data.beat.id}`;
     screen = <Beat beat={data.beat} clues={data.clues} me={me} nightId={data.nightId} onReact={react} />;
@@ -113,7 +115,7 @@ export default function Jess() {
 
   return (
     <>
-      <Sky phase={data?.phase ?? 0} />
+      <Sky tod={tod} />
       <div className="app">
         {inStory && (
           <header className="topbar">

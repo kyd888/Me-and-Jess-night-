@@ -99,7 +99,6 @@ function ControlRoom({ pin, onLock }) {
   const [sheet, setSheet] = useState(null);
   const [flash, setFlash] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [waitPrompt, setWaitPrompt] = useState(false);
   const [justPicked, setJustPicked] = useState(false);
   const lastPick = useRef(undefined);
   const chime = useChime();
@@ -148,7 +147,7 @@ function ControlRoom({ pin, onLock }) {
     );
   }
 
-  const { state, pick, activePlanId, nextPreview, categoryOptions, categories, requests, reactions, yourCallOptions = [] } = data;
+  const { state, pick, activePlanId, nextPreview, categoryOptions, categories, requests, reactions, yourCallOptions = [], prefs, lengths, dateComplete, areas = [] } = data;
   const planById = Object.fromEntries(state.plans.map((p) => [p.id, p]));
   const round = state.round;
   const plan = activePlanId ? planById[activePlanId] : null;
@@ -168,13 +167,15 @@ function ControlRoom({ pin, onLock }) {
         <button className="k-icon" onClick={() => setSheet({ type: "menu" })} aria-label="menu">⋯</button>
       </header>
 
+      <DateSettings prefs={prefs} lengths={lengths} areas={areas} started={state.status !== "waiting"} roundsDone={state.rounds.length} busy={busy} onChange={(p) => act({ type: "setPrefs", prefs: p }, "Saved ✓ (only affects what's next)")} />
+
       {/* ── Before she arrives ── */}
       {state.status === "waiting" && (
         <>
           <section className="k-card k-hero">
             <p className="k-label">Status</p>
             <p className="k-big">Waiting for Jess</p>
-            <p className="k-muted">Her page says "Your night isn't ready yet." Tap this when she's actually here.</p>
+            <p className="k-muted">Her page says "Hey Jess. not yet 👀". Tap this when she's actually here.</p>
             <button className="k-btn k-here" disabled={busy} onClick={() => window.confirm("Jess is here? This starts the night on her phone.") && act({ type: "start" }, "The night has started 🩷")}>
               JESS IS HERE 🩷
             </button>
@@ -235,15 +236,33 @@ function ControlRoom({ pin, onLock }) {
           {/* ── Between rounds: Generate next part? ── */}
           {state.stage === "between" && (
             <section className="k-card k-hero">
-              {!waitPrompt ? (
+              {state.chilling ? (
                 <>
-                  <p className="k-big">Generate next part of night?</p>
+                  <p className="k-big">Chilling 😌</p>
+                  <p className="k-muted">Nothing new gets dealt. Her phone just says "phone down 😌".</p>
+                  <button className="k-btn k-primary wide" disabled={busy} onClick={() => act({ type: "chill", on: false })}>Ready: what's next?</button>
+                </>
+              ) : dateComplete ? (
+                <>
+                  <p className="k-big">That's a complete date ✓</p>
+                  <p className="k-muted">You hit the {lengths?.[prefs?.length]?.label?.toLowerCase()} date. Wrap it up whenever, or keep going.</p>
+                  <div className="k-col">
+                    <button className="k-btn k-primary k-advance" disabled={busy} onClick={() => window.confirm("End the date? She'll see a little ending + her scrapbook.") && act({ type: "finish" }, "Done 🩷")}>
+                      END THE DATE 🩷
+                    </button>
+                    <button className="k-btn" onClick={() => act({ type: "chill", on: true })}>KEEP CHILLING</button>
+                    <button className="k-btn" onClick={() => setSheet({ type: "category", mode: "deal" })}>ONE MORE ANYWAY</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="k-big">Generate next part?</p>
                   {nextPreview ? (
                     <p className="k-muted">
                       Next category: <strong className="k-pink">{catLabel(nextPreview)}</strong> · “{categories[nextPreview]?.label}”
                     </p>
                   ) : (
-                    <p className="k-muted">Nothing fits anymore. Probably time to finish the night 🩷</p>
+                    <p className="k-muted">Nothing fits anymore. Probably time to wrap up 🩷</p>
                   )}
                   <div className="k-col">
                     {nextPreview && (
@@ -251,14 +270,9 @@ function ControlRoom({ pin, onLock }) {
                         YES
                       </button>
                     )}
-                    <button className="k-btn" onClick={() => setWaitPrompt(true)}>WAIT</button>
+                    <button className="k-btn" onClick={() => act({ type: "chill", on: true })}>KEEP CHILLING</button>
                     <button className="k-btn" onClick={() => setSheet({ type: "category", mode: "deal" })}>CHOOSE CATEGORY MYSELF</button>
                   </div>
-                </>
-              ) : (
-                <>
-                  <p className="k-muted">Taking a breather. Her phone says "phone down, enjoy this part."</p>
-                  <button className="k-btn k-primary wide" onClick={() => setWaitPrompt(false)}>Ready: generate next part</button>
                 </>
               )}
             </section>
@@ -348,6 +362,13 @@ function ControlRoom({ pin, onLock }) {
               <p className="k-muted">
                 Next possible category: <strong className="k-pink">{catLabel(nextPreview)}</strong>
               </p>
+              {state.chilling ? (
+                <p className="k-chill">Chilling 😌 no rush. <button className="k-linklike" onClick={() => act({ type: "chill", on: false })}>stop</button></p>
+              ) : (
+                <button className="k-btn wide" disabled={busy} onClick={() => act({ type: "chill", on: true }, "Chilling. Take your time.")}>
+                  KEEP CHILLING 😌
+                </button>
+              )}
               <button className="k-btn k-primary k-advance" disabled={busy} onClick={() => window.confirm("Done with this one? It goes in her scrapbook.") && act({ type: "finishRound" }, "Added to her scrapbook 🎟️")}>
                 WE FINISHED THIS ✓
               </button>
@@ -427,7 +448,7 @@ function ControlRoom({ pin, onLock }) {
           title={sheet.mode === "reshuffle" ? "Deal a different category" : "Choose category"}
           onClose={() => setSheet(null)}
           onPick={async (category) =>
-            (await act({ type: sheet.mode === "reshuffle" ? "reshuffle" : "deal", category }, "Cards dealt to her phone 🃏")) && (setSheet(null), setWaitPrompt(false))
+            (await act({ type: sheet.mode === "reshuffle" ? "reshuffle" : "deal", category }, "Cards dealt to her phone 🃏")) && setSheet(null)
           }
         />
       )}
@@ -464,6 +485,85 @@ function ControlRoom({ pin, onLock }) {
         </div>
       )}
     </div>
+  );
+}
+
+const CITIES = [
+  ["TULSA", "Tulsa"],
+  ["OKC", "Oklahoma City"],
+  ["CUSTOM", "Custom"],
+];
+const ENERGIES = [
+  ["CHILL", "Very chill"],
+  ["NORMAL", "Normal"],
+  ["ACTIVE", "Let's do something"],
+];
+const VIBE_OPTIONS = [
+  ["HUNGRY", "🍜 Hungry"],
+  ["SWEET", "🍦 Sweet"],
+  ["COFFEE", "☕ Coffee"],
+  ["GAME", "🎮 Game"],
+  ["TALK", "💬 Talk"],
+  ["RANDOM", "🎲 Random"],
+  ["HOME", "🏠 Home"],
+];
+
+function Seg({ value, options, onPick, busy }) {
+  return (
+    <div className="k-seg">
+      {options.map(([v, label]) => (
+        <button key={v} className={`k-seg-btn ${value === v ? "is-on" : ""}`} disabled={busy} onClick={() => onPick(v)}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Private settings. Change anytime; only what's dealt next changes. */
+function DateSettings({ prefs, lengths, areas, started, roundsDone, busy, onChange }) {
+  const [custom, setCustom] = useState(prefs?.customCity || "");
+  if (!prefs || !lengths) return null;
+  const L = lengths[prefs.length];
+  const target = L && L.max ? `${L.min === L.max ? L.max : `${L.min}–${L.max}`} rounds` : "no target";
+  return (
+    <details className="k-card k-settings" open={!started}>
+      <summary className="k-summary">
+        {L?.label} · {prefs.city === "CUSTOM" ? prefs.customCity || "Custom" : prefs.city === "OKC" ? "OKC" : "Tulsa"} · {ENERGIES.find(([v]) => v === prefs.energy)?.[1]}
+        {prefs.vibe ? ` · ${VIBE_OPTIONS.find(([v]) => v === prefs.vibe)?.[1]}` : ""}
+      </summary>
+      <p className="k-label">Date length · {roundsDone} done, {target}</p>
+      <Seg busy={busy} value={prefs.length} options={Object.entries(lengths).map(([k, v]) => [k, `${v.label} · ${v.hint}`])} onPick={(length) => onChange({ length })} />
+
+      <p className="k-label">City</p>
+      <Seg busy={busy} value={prefs.city} options={CITIES} onPick={(city) => onChange({ city, area: "" })} />
+      {prefs.city === "CUSTOM" && (
+        <div className="k-row gap">
+          <input className="k-input" placeholder="city name" value={custom} onChange={(e) => setCustom(e.target.value)} />
+          <button className="k-btn" disabled={busy} onClick={() => onChange({ customCity: custom })}>Save</button>
+          <p className="k-muted small">Custom city = only ideas that work anywhere (chains, drives, home-free stuff).</p>
+        </div>
+      )}
+      {areas.length > 0 && (
+        <>
+          <p className="k-label">Where we are now (keeps stops close)</p>
+          <Seg busy={busy} value={prefs.area || ""} options={[["", "Anywhere"], ...areas.map((a) => [a, a])]} onPick={(area) => onChange({ area })} />
+        </>
+      )}
+
+      <p className="k-label">Energy</p>
+      <Seg busy={busy} value={prefs.energy} options={ENERGIES} onPick={(energy) => onChange({ energy })} />
+
+      <p className="k-label">Current vibe</p>
+      <Seg busy={busy} value={prefs.vibe || ""} options={[["", "None"], ...VIBE_OPTIONS]} onPick={(vibe) => onChange({ vibe: vibe || null })} />
+
+      {!started && (
+        <label className="k-check">
+          <input type="checkbox" checked={prefs.opening} disabled={busy} onChange={(e) => onChange({ opening: e.target.checked })} /> Start with the opening ("come inside" + flowers)
+        </label>
+      )}
+      <p className="k-muted small">Jess never sees any of this.</p>
+    </details>
   );
 }
 

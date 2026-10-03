@@ -31,6 +31,52 @@ function shuffle(arr, rand = Math.random) {
   return a;
 }
 
+// ── Kyd's private settings ───────────────────────────────
+
+/**
+ * Date length. Changing it mid-date only changes what gets dealt NEXT.
+ *   min/max     rounds (cards she flips)
+ *   minutes     after this long (and at least `min` rounds) the date is "complete"
+ *   maxDuration longest single plan that can be dealt
+ *   cluster     how hard to keep stops in the same district
+ */
+export const LENGTHS = {
+  QUICK: { label: "Quick", hint: "45–75 min", min: 1, max: 2, minutes: 60, maxDuration: 50, cluster: 3 },
+  SHORT: { label: "Short", hint: "1.5–2 hrs", min: 2, max: 3, minutes: 105, maxDuration: 75, cluster: 1.5 },
+  FULL: { label: "Full", hint: "3–5 hrs", min: 4, max: 6, minutes: 240, maxDuration: Infinity, cluster: 0.7 },
+  OPEN: { label: "Open", hint: "no target", min: Infinity, max: Infinity, minutes: Infinity, maxDuration: Infinity, cluster: 0.7 },
+};
+
+export const DEFAULT_PREFS = {
+  length: "FULL",
+  city: "TULSA", // TULSA | OKC | CUSTOM (custom = only plans that work anywhere)
+  customCity: "",
+  area: "", // optional starting district, e.g. "Plaza"
+  energy: "NORMAL", // CHILL | NORMAL | ACTIVE
+  vibe: null, // HUNGRY | SWEET | COFFEE | GAME | TALK | RANDOM | HOME
+  opening: true, // the "come inside / flowers" beats before the first card
+};
+
+const VIBES = {
+  HUNGRY: ["FOOD"],
+  SWEET: ["SWEET"],
+  COFFEE: ["COFFEE"],
+  GAME: ["GAME"],
+  TALK: ["TALK"],
+  RANDOM: ["OUTING", "CHALLENGE"],
+  HOME: ["HOME", "COZY"],
+};
+
+export const prefsOf = (state) => ({ ...DEFAULT_PREFS, ...(state.prefs || {}) });
+const lengthOf = (state) => LENGTHS[prefsOf(state).length] || LENGTHS.FULL;
+
+/** Enough rounds / time for this length? (A quick date that's done is a complete date.) */
+export function dateComplete(state, now, done = state.rounds.length) {
+  const L = lengthOf(state);
+  if (done >= L.max) return true;
+  return done >= L.min && state.startedAt && (now - state.startedAt) / 60000 >= L.minutes;
+}
+
 // ── State ────────────────────────────────────────────────
 
 export function freshState(sessionId) {
@@ -47,6 +93,9 @@ export function freshState(sessionId) {
     round: null, // the live round (see dealRound)
     rounds: [], // finished rounds
     nextCategory: null, // what YES will deal next (shown to Kyd)
+    prefs: { ...DEFAULT_PREFS },
+    chilling: false, // KEEP CHILLING: nothing new gets dealt until you say so
+    finaleTitle: null,
     scrapbook: [],
     clues: [],
     message: null,
@@ -105,10 +154,20 @@ export function availablePlans(state, category, now, { includeUsed = false } = {
       .map((p) => p.place)
   );
   const hungry = mealsDone(state) === 0;
+  const prefs = prefsOf(state);
+  const L = lengthOf(state);
   return state.plans.filter(
     (p) =>
       p.category === category &&
       !p.wildcard &&
+      // City: plans for this city, plus anything that works anywhere.
+      ((p.city || "ANY") === "ANY" || p.city === prefs.city) &&
+      // Out of town: home is a drive away, so no "at home" plans.
+      !(prefs.city !== settings.homeCity && p.where === "home") &&
+      // Length: nothing that would eat the whole date.
+      (p.duration || 0) <= L.maxDuration &&
+      !(prefs.length === "QUICK" && p.reservation) &&
+      !(prefs.energy === "CHILL" && p.walking) &&
       p.enabled !== false &&
       (includeUsed || (!used.has(p.id) && !(p.where === "out" && visited.has(p.place)))) &&
       isOpen(p, now) &&
@@ -133,6 +192,10 @@ export function categoryOptions(state, now, history = state.rounds.map((r) => r.
   const late = t >= 22 * 60;
   const lastRound = state.rounds[state.rounds.length - 1];
   const atHome = lastRound && planOf(state, lastRound.planId)?.where === "home";
+  const prefs = prefsOf(state);
+  const quickish = prefs.length === "QUICK" || prefs.length === "SHORT";
+  const complete = dateComplete(state, now, done);
+  const here = currentDistrict(state);
 
   return Object.keys(categories).map((id) => {
     const cat = categories[id];
@@ -172,6 +235,34 @@ export function categoryOptions(state, now, history = state.rounds.map((r) => r.
       if (["OUTING", "CHALLENGE"].includes(id)) weight *= 0.4;
     }
 
+    // She likes dark coffee and games: a little extra weight. Coffee is a daytime thing.
+    if (id === "COFFEE") weight *= t >= 21 * 60 ? 0.4 : t < 17 * 60 ? 1.6 : 1.2;
+    if (id === "GAME") weight *= 1.2;
+
+    // Short dates: food + dessert/coffee + something tiny. Dessert doesn't have to wait.
+    if (quickish) {
+      if (reason === "dessert comes after food" || reason === "that's an ending, too early") reason = null;
+      if (id === "FOOD" && meals === 0) weight *= 1.5;
+      if (["SWEET", "COFFEE"].includes(id)) weight *= 1.8;
+      if (["OUTING", "CHALLENGE", "TALK"].includes(id)) weight *= 0.6;
+    }
+
+    // Energy
+    if (prefs.energy === "CHILL") weight *= { OUTING: 0.4, CHALLENGE: 0.5, GAME: 0.8, HOME: 1.5, COZY: 1.3, COFFEE: 1.3, TALK: 1.3, SWEET: 1.2 }[id] || 1;
+    if (prefs.energy === "ACTIVE") weight *= { OUTING: 1.8, CHALLENGE: 1.5, GAME: 1.4, HOME: 0.6, COZY: 0.6 }[id] || 1;
+
+    // Current vibe: heavily favor it.
+    if (prefs.vibe && VIBES[prefs.vibe]?.includes(id)) weight *= 5;
+
+    // Out of town: home is far away.
+    if (prefs.city !== settings.homeCity && ["HOME", "COZY"].includes(id)) weight *= 0.3;
+
+    // Quick/short: favor categories with a stop right where you are.
+    if (quickish && here && availablePlans(state, id, now).some((p) => p.district === here)) weight *= 1.8;
+
+    // Date length reached: the engine stops suggesting (you can still force one).
+    if (complete) reason = reason || "date's complete (you can still force one)";
+
     const available = availablePlans(state, id, now).length;
     if (!reason && available === 0) reason = "nothing open / left";
     if (!reason && available === 1) reason = "only 1 option open (you can still force it)";
@@ -202,15 +293,43 @@ function pickAside() {
 }
 
 /** Deal 2–4 different plans face-down (usually 3), shuffled, with random faces. */
+/** Where the last stop was (or where you said you are). */
+function currentDistrict(state) {
+  for (let i = state.rounds.length - 1; i >= 0; i--) {
+    const p = planOf(state, state.rounds[i].planId);
+    if (p?.where === "out") return p.district || null;
+  }
+  return prefsOf(state).area || null;
+}
+
+/** Shuffle, but prefer stops near the last one (hard in QUICK) and plans that fit the energy. */
+function rankPlans(state, plans) {
+  const prefs = prefsOf(state);
+  const L = lengthOf(state);
+  const here = currentDistrict(state);
+  const score = (p) => {
+    let s = Math.random();
+    if (here && p.district === here) s += L.cluster;
+    else if (here && p.district && p.district !== here) s -= L.cluster * 0.8;
+    if (prefs.length === "QUICK" && (p.duration || 0) <= 20) s += 0.3;
+    if (prefs.energy === "CHILL" && p.where !== "out") s += 0.3;
+    if (prefs.energy === "ACTIVE" && p.where === "out" && (p.duration || 0) >= 30) s += 0.3;
+    if (prefs.city !== settings.homeCity && p.where === "home") s -= 1;
+    return s;
+  };
+  return plans.map((p) => [score(p), p]).sort((a, b) => b[0] - a[0]).map(([, p]) => p);
+}
+
 function dealRound(state, category, now) {
-  const pool = shuffle(availablePlans(state, category, now));
+  const pool = rankPlans(state, availablePlans(state, category, now));
   if (!pool.length) throw new Error(`No open plans left in ${category}`);
   const roll = Math.random();
   const want = roll < 0.15 ? 2 : roll > 0.85 ? 4 : 3;
   const chosen = pool.slice(0, Math.min(want, pool.length));
   // Sometimes one card is secretly "your call": you decide based on her vibe.
   const wildcard = state.plans.find((p) => p.wildcard && p.enabled !== false);
-  if (wildcard && chosen.length >= 2 && Math.random() < (settings.yourCallChance ?? 0.15)) {
+  const lastWasWildcard = planOf(state, state.rounds[state.rounds.length - 1]?.planId)?.wildcard;
+  if (wildcard && !lastWasWildcard && chosen.length >= 2 && Math.random() < (settings.yourCallChance ?? 0.15)) {
     chosen[Math.floor(Math.random() * chosen.length)] = wildcard;
   }
   const faces = shuffle(copy.faces);
@@ -269,6 +388,7 @@ function finishRound(state, jess, now) {
   }
   state.round = null;
   state.stage = "between";
+  state.chilling = false;
   state.nextCategory = chooseCategory(state, now, seedFor(state, state.rounds.length));
 }
 
@@ -283,9 +403,10 @@ export function applyHostAction(prev, action, jess = freshJess(), now = Date.now
       state.status = "started";
       state.startedAt = now;
       state.lastBeatAt = now;
-      state.stage = state.opening.length ? "opening" : "between";
+      const withOpening = state.opening.length && prefsOf(state).opening;
+      state.stage = withOpening ? "opening" : "between";
       state.openingIndex = 0;
-      if (!state.opening.length) state.nextCategory = chooseCategory(state, now, seedFor(state, 0));
+      if (!withOpening) state.nextCategory = chooseCategory(state, now, seedFor(state, 0));
       break;
     }
     case "nextBeat": {
@@ -303,7 +424,7 @@ export function applyHostAction(prev, action, jess = freshJess(), now = Date.now
       // YES (category omitted) or CHOOSE CATEGORY MYSELF (category given).
       if (state.status !== "started") break;
       if (state.round && roundPick(state.round, jess)) throw new Error("Finish the current card first");
-      const category = action.category || state.nextCategory || chooseCategory(state, now, uid());
+      const category = action.category || (dateComplete(state, now) ? null : state.nextCategory || chooseCategory(state, now, uid()));
       if (!category) throw new Error("No categories left. Maybe it's time to finish the night 🩷");
       state.round = dealRound(state, category, now);
       state.stage = "round";
@@ -344,8 +465,21 @@ export function applyHostAction(prev, action, jess = freshJess(), now = Date.now
       state.status = "finished";
       state.finishedAt = now;
       state.paused = false;
+      // Short dates get a playful little ending, not the big one. Still a complete date.
+      state.finaleTitle = ["QUICK", "SHORT"].includes(prefsOf(state).length) ? pickOne(settings.shortEndings) : null;
       break;
     }
+    case "setPrefs": {
+      const next = { ...prefsOf(state), ...(action.prefs || {}) };
+      if (!LENGTHS[next.length]) throw new Error("Unknown date length");
+      state.prefs = next;
+      // Re-plan what's next. Nothing already happening changes.
+      if (state.stage === "between") state.nextCategory = chooseCategory(state, now, seedFor(state, `${state.rounds.length}-${JSON.stringify(next)}`));
+      break;
+    }
+    case "chill":
+      state.chilling = !!action.on;
+      break;
     case "pause":
       state.paused = !!action.paused;
       break;
@@ -373,7 +507,8 @@ export function applyHostAction(prev, action, jess = freshJess(), now = Date.now
       break;
     }
     case "reset":
-      return { ...freshState(state.sessionId), rev: state.rev + 1, updatedAt: now };
+      // Keeps your settings (length, city…), wipes everything else.
+      return { ...freshState(state.sessionId), prefs: prefsOf(state), rev: state.rev + 1, updatedAt: now };
     default:
       throw new Error(`Unknown action: ${action.type}`);
   }
@@ -460,7 +595,7 @@ export function guestView(state, jess = freshJess()) {
     clues: started ? state.clues.filter((c) => c.roundId === clueKey).map(({ id, text }) => ({ id, text })) : [],
     scrapbook: state.scrapbook,
     message: state.message,
-    finale: state.status === "finished" ? settings.finale : null,
+    finale: state.status === "finished" ? { ...settings.finale, title: state.finaleTitle || settings.finale.title } : null,
   };
 }
 
@@ -473,6 +608,11 @@ export function suggestionsFor(state, mood, now) {
     .flatMap((c) => availablePlans(state, c, now))
     .filter((p) => !current.has(p.id))
     .map((p) => p.id);
+}
+
+/** Districts known for a city (for the "current area" picker). */
+function areasFor(city) {
+  return [...new Set(defaultPlans.filter((p) => p.city === city && p.district).map((p) => p.district))];
 }
 
 /** Everything the Control Room needs. */
@@ -488,8 +628,12 @@ export function hostView(state, jess = freshJess(), now = Date.now()) {
     // For a "your call" card: real options from this round's category.
     yourCallOptions: round ? availablePlans(state, round.category, now).filter((p) => !round.cards.some((c) => c.planId === p.id)).map((p) => p.id) : [],
     // What YES would deal next. Only a preview until WE FINISHED THIS.
-    nextPreview: state.stage === "between" ? state.nextCategory : chooseCategory(state, now, seedFor(state, state.rounds.length + (round ? 1 : 0)), projected),
+    nextPreview: state.stage === "between" ? (dateComplete(state, now) ? null : state.nextCategory) : chooseCategory(state, now, seedFor(state, state.rounds.length + (round ? 1 : 0)), projected),
     categoryOptions: categoryOptions(state, now),
+    prefs: prefsOf(state),
+    lengths: Object.fromEntries(Object.entries(LENGTHS).map(([k, v]) => [k, { label: v.label, hint: v.hint, min: v.min, max: v.max }])),
+    dateComplete: dateComplete(state, now),
+    areas: areasFor(prefsOf(state).city),
     categories,
     requests: jess.requests.map((r) => ({ ...r, label: moods[r.mood]?.label, emoji: moods[r.mood]?.emoji, handled: state.handled[r.id] || null, suggestions: suggestionsFor(state, r.mood, now) })),
     reactions: jess.reactions,

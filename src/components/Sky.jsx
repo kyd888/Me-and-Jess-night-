@@ -5,30 +5,32 @@ import { BirdGlyph } from "./icons.jsx";
 function makeStars(count) {
   let seed = 7;
   const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  return Array.from({ length: count }, (_, i) => ({
+  return Array.from({ length: count }, () => ({
     left: rand() * 100,
     top: rand() * 70,
     size: 1 + rand() * 2.2,
     delay: rand() * 6,
-    // Stars come out a few at a time as the night goes on.
-    from: i < 8 ? 1 : i < 20 ? 2 : i < 34 ? 3 : 4,
   }));
 }
 
-function Sky({ phase }) {
+const TODS = ["morning", "day", "golden", "night"];
+
+/**
+ * The sky behind everything. It follows the time of day (see lib/timeOfDay.js)
+ * and cross-fades between periods. Stars and the moon only come out at night.
+ */
+function Sky({ tod = "night" }) {
   const stars = useMemo(() => makeStars(48), []);
   return (
-    <div className="sky" aria-hidden="true">
-      {[0, 1, 2, 3, 4].map((p) => (
-        <div key={p} className={`sky-layer sky-${p}`} style={{ opacity: p === phase ? 1 : 0 }} />
+    <div className={`sky sky-is-${tod}`} aria-hidden="true">
+      {TODS.map((t) => (
+        <div key={t} className={`sky-layer sky-${t}`} style={{ opacity: t === tod ? 1 : 0 }} />
       ))}
+      <div className="sun" />
+      <div className="moon" />
       <div className="stars">
         {stars.map((s, i) => (
-          <span
-            key={i}
-            className="star-slot"
-            style={{ left: `${s.left}%`, top: `${s.top}%`, opacity: phase >= s.from ? 1 : 0 }}
-          >
+          <span key={i} className="star-slot" style={{ left: `${s.left}%`, top: `${s.top}%` }}>
             <span className="star" style={{ width: s.size, height: s.size, animationDelay: `${s.delay}s` }} />
           </span>
         ))}
