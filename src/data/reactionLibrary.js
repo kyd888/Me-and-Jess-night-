@@ -134,6 +134,12 @@ export const contexts = {
     categories: [C.AWKWARD, C.CRYING_LAUGHING],
     captions: ["my fault gang 😭"],
   },
+  // Laptop homepage, the moment she scans the QR code
+  arrived: {
+    chance: 1,
+    categories: [C.CELEBRATING, C.LETS_GO],
+    captions: ["SHE'S HERE 🚨", "she outside 🚨", "SHE'S HERE HERE 🚨"],
+  },
   // Hidden: she taps the bird on the waiting screen 5 times
   easterEgg: {
     chance: 1,

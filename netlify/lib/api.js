@@ -3,7 +3,7 @@
  * `store` is anything with async get(key) → object|null and set(key, object).
  */
 import { settings } from "../../data/plan.js";
-import { applyHostAction, applyJessAction, freshJess, freshState, guestView, hostView } from "./engine.js";
+import { applyHostAction, applyJessAction, freshJess, freshState, guestView, hostView, prefsOf } from "./engine.js";
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -36,6 +36,13 @@ export async function handleGuest(req, store) {
       const { state, jess } = await load(store, sid);
       const next = applyJessAction(jess, action, state);
       await store.set(jessKey(sid), next);
+      // Scanning the QR code is the "she's here" moment: start the night
+      // (unless Kyd turned that off and wants to tap JESS IS HERE himself).
+      if (action.type === "arrive" && state.status === "waiting" && prefsOf(state).startOnScan) {
+        const started = { ...applyHostAction(state, { type: "start" }, next), startedBy: "scan" };
+        await store.set(stateKey(sid), started);
+        return json(guestView(started, next));
+      }
       return json(guestView(state, next));
     }
     return json({ error: "Method not allowed" }, 405);

@@ -11,7 +11,12 @@ A surprise date night that plays like a little card game, which you secretly run
 ## How a night plays
 
 1. **Waiting.** Her page says *"Hey Jess. not yet 👀"* Nothing is scheduled.
-2. **You tap JESS IS HERE 🩷** when she actually arrives. The real start time is recorded and her phone moves into the night with no refresh.
+2. **She scans the QR code on your laptop** (the homepage, `/`) when she walks in. That *is* the arrival:
+   - **Her phone** opens the night and it starts right away.
+   - **Your phone** chimes ("SHE'S HERE 🚨 she scanned in").
+   - **The laptop** loses it for a second: "wait…" shakes the screen, then confetti and a celebration GIF ("SHE'S HERE 🚨" / "she outside 🚨"), then it settles on **"oh hey Jess 👋 · look at your phone 👀 · the QR code has retired 🫡"** with the QR card tipped over and stamped **SCANNED ✓** with the time.
+   - **Only the QR counts.** It opens `/jess?arrive=1`; the link you text her doesn't, so opening it early from home won't start anything. Scanning again later doesn't restart anything either.
+   - **To start it yourself instead**, turn off *"Start the night when she scans the QR code"* in the Control Room settings. The scan is still recorded ("She scanned in 👀 at 6:42") and you tap **JESS IS HERE 🩷** when ready. That button always works too. The real start time is recorded and her phone moves into the night with no refresh.
 3. **Opening:** *"Hey Jess. you don't have to plan anything tonight."* → *"rule #1: don't ask where we're going."* → *"come inside 👀"* → *"put your phone down for a sec"* (flowers + basket). You tap **NEXT** through these.
 4. **Card rounds:**
    - **The server picks a category** for the next part of the night ("food. obviously.", "something fun", "little adventure"…).

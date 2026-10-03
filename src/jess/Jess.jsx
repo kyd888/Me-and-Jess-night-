@@ -33,6 +33,16 @@ export default function Jess() {
     toastTimer.current = setTimeout(() => setToast(null), 2600);
   };
 
+  // Opened from the QR code? Tell the server she's here (that starts the night),
+  // then drop ?arrive from the URL so a refresh doesn't look like a new scan.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("arrive")) return;
+    guestApi.send({ type: "arrive" }).then(setData).catch(() => {});
+    url.searchParams.delete("arrive");
+    window.history.replaceState(null, "", url.pathname + url.search);
+  }, [setData]);
+
   // Onboarding is remembered per night, so a reset starts it fresh.
   useEffect(() => {
     if (data?.nightId) setOnboard(local.get(`jess-onboard-${data.nightId}`, 0));

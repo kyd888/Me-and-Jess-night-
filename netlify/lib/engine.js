@@ -55,6 +55,7 @@ export const DEFAULT_PREFS = {
   energy: "NORMAL", // CHILL | NORMAL | ACTIVE
   vibe: null, // HUNGRY | SWEET | COFFEE | GAME | TALK | RANDOM | HOME
   opening: true, // the "come inside / flowers" beats before the first card
+  startOnScan: true, // scanning the QR code = she's here = the night starts
 };
 
 const VIBES = {
@@ -105,7 +106,7 @@ export function freshState(sessionId) {
   };
 }
 
-export const freshJess = () => ({ requests: [], reactions: [], picks: {} });
+export const freshJess = () => ({ requests: [], reactions: [], picks: {}, arrivedAt: null });
 
 // ── Time (Tulsa time, not the server's) ──────────────────
 
@@ -532,6 +533,9 @@ export function applyJessAction(prev, action, state, now = Date.now()) {
     if (!moods[action.mood]) throw new Error("Unknown mood");
     jess.requests.push({ id: uid(), mood: action.mood, roundId: state.round?.id || null, at: now });
     jess.requests = jess.requests.slice(-MAX_LIST);
+  } else if (action.type === "arrive") {
+    // She scanned the QR code. Only the first scan counts.
+    if (!jess.arrivedAt) jess.arrivedAt = now;
   } else if (action.type === "react") {
     jess.reactions.push({ id: uid(), roundId: action.roundId || null, text: String(action.text || "").slice(0, 80), at: now });
     jess.reactions = jess.reactions.slice(-MAX_LIST);
@@ -577,6 +581,7 @@ export function guestView(state, jess = freshJess()) {
     stage: started ? state.stage : null,
     paused: state.paused,
     nightId: state.startedAt || 0,
+    arrivedAt: jess.arrivedAt || null,
     rev: state.rev,
     phase: skyPhase(state),
     her: settings.her,
@@ -637,6 +642,7 @@ export function hostView(state, jess = freshJess(), now = Date.now()) {
     categories,
     requests: jess.requests.map((r) => ({ ...r, label: moods[r.mood]?.label, emoji: moods[r.mood]?.emoji, handled: state.handled[r.id] || null, suggestions: suggestionsFor(state, r.mood, now) })),
     reactions: jess.reactions,
+    arrivedAt: jess.arrivedAt || null,
     serverTime: now,
   };
 }

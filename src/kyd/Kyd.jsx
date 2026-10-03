@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { fmtTime, hostApi, local, sessionId, usePoll } from "../lib/api.js";
+import { jessLink } from "../lib/links.js";
 import { CategorySheet, EditPlanSheet, PlanPickerSheet, TextSheet } from "./Sheets.jsx";
 import Library from "./Library.jsx";
 import "./kyd.css";
@@ -108,6 +109,17 @@ function ControlRoom({ pin, onLock }) {
     if (error?.status === 401) onLock();
   }, [error, onLock]);
 
+  // She scanned the QR code → chime + "she's here" flash.
+  const lastArrival = useRef(undefined);
+  useEffect(() => {
+    if (!data) return;
+    if (lastArrival.current !== undefined && data.arrivedAt && !lastArrival.current) {
+      chime();
+      say("SHE'S HERE 🚨 she scanned in");
+    }
+    lastArrival.current = data.arrivedAt || null;
+  }, [data, chime]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Jess just flipped a card → chime + highlight.
   useEffect(() => {
     if (!data) return;
@@ -174,8 +186,21 @@ function ControlRoom({ pin, onLock }) {
         <>
           <section className="k-card k-hero">
             <p className="k-label">Status</p>
-            <p className="k-big">Waiting for Jess</p>
-            <p className="k-muted">Her page says "Hey Jess. not yet 👀". Tap this when she's actually here.</p>
+            {data.arrivedAt ? (
+              <>
+                <p className="k-big">She scanned in 👀</p>
+                <p className="k-muted">at {fmtTime(data.arrivedAt)}. Auto-start is off, so tap this when you're ready.</p>
+              </>
+            ) : (
+              <>
+                <p className="k-big">Waiting for Jess</p>
+                <p className="k-muted">
+                  {prefs?.startOnScan
+                    ? "Leave the homepage QR up on your laptop. When she scans it, the night starts by itself and your phone chimes. Or tap this."
+                    : "Her page says \"Hey Jess. not yet 👀\". Tap this when she's actually here."}
+                </p>
+              </>
+            )}
             <button className="k-btn k-here" disabled={busy} onClick={() => window.confirm("Jess is here? This starts the night on her phone.") && act({ type: "start" }, "The night has started 🩷")}>
               JESS IS HERE 🩷
             </button>
@@ -204,7 +229,7 @@ function ControlRoom({ pin, onLock }) {
 
           <section className="k-stats">
             <div>
-              <span className="k-label">Started</span>
+              <span className="k-label">{state.startedBy === "scan" ? "She scanned in" : "Started"}</span>
               <strong>{fmtTime(state.startedAt)}</strong>
             </div>
             <div>
@@ -562,6 +587,11 @@ function DateSettings({ prefs, lengths, areas, started, roundsDone, busy, onChan
           <input type="checkbox" checked={prefs.opening} disabled={busy} onChange={(e) => onChange({ opening: e.target.checked })} /> Start with the opening ("come inside" + flowers)
         </label>
       )}
+      {!started && (
+        <label className="k-check">
+          <input type="checkbox" checked={prefs.startOnScan} disabled={busy} onChange={(e) => onChange({ startOnScan: e.target.checked })} /> Start the night when she scans the QR code
+        </label>
+      )}
       <p className="k-muted small">Jess never sees any of this.</p>
     </details>
   );
@@ -637,11 +667,13 @@ function Feed({ requests, reactions }) {
 }
 
 function JessLink() {
-  const link = `${window.location.origin}/jess${sessionId !== "tonight" ? `?s=${encodeURIComponent(sessionId)}` : ""}`;
+  // The QR counts as "she's here"; the shared/texted link doesn't.
+  const link = jessLink();
+  const scanLink = jessLink({ arrive: true });
   const [svg, setSvg] = useState("");
   useEffect(() => {
-    QRCode.toString(link, { type: "svg", margin: 1, color: { dark: "#3a1f33", light: "#fff7f2" } }).then(setSvg);
-  }, [link]);
+    QRCode.toString(scanLink, { type: "svg", margin: 1, color: { dark: "#3a1f33", light: "#fff7f2" } }).then(setSvg);
+  }, [scanLink]);
   const share = () => (navigator.share ? navigator.share({ url: link }).catch(() => {}) : navigator.clipboard?.writeText(link));
   return (
     <section className="k-card k-jesslink">
